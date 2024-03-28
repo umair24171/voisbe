@@ -1,19 +1,67 @@
+// import 'dart:async';
+
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
+import 'package:social_notes/resources/navigation.dart';
+import 'package:social_notes/screens/add_note_screen/controllers/add_note_controller.dart';
+import 'package:social_notes/screens/add_note_screen/provider/note_provider.dart';
+import 'package:social_notes/screens/auth_screens/controller/notifications_methods.dart';
+import 'package:social_notes/screens/auth_screens/model/user_model.dart';
+import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
+import 'package:social_notes/screens/chat_screen.dart/controller/chat_controller.dart';
+import 'package:social_notes/screens/chat_screen.dart/model/chat_model.dart';
 import 'package:social_notes/screens/chat_screen.dart/view/widgets/custom_message_note.dart';
+import 'package:uuid/uuid.dart';
+import 'package:voice_message_package/voice_message_package.dart';
 
 class ChatScreen extends StatelessWidget {
-  const ChatScreen({super.key});
+  const ChatScreen(
+      {super.key,
+      this.receiverUser,
+      this.receiverId,
+      this.rectoken,
+      this.receiverName,
+      this.receiverPhotoUrl});
+
+  final UserModel? receiverUser;
+  final String? receiverId;
+  final String? receiverName;
+  final String? receiverPhotoUrl;
+  final String? rectoken;
 
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
+    var userProvider = Provider.of<UserProvider>(context, listen: false).user;
+    String recID = receiverUser == null ? receiverId! : receiverUser!.uid;
+    String recName = receiverUser == null ? receiverName! : receiverUser!.name;
+    String recPhoto =
+        receiverUser == null ? receiverPhotoUrl! : receiverUser!.photoUrl;
+    String recToken = receiverUser == null ? rectoken! : receiverUser!.token;
+
+    String getConversationId() {
+      return userProvider!.uid.hashCode <= recID.hashCode
+          ? '${userProvider.uid}_${recID}'
+          : '${recID}_${userProvider.uid}';
+    }
+
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 0,
         leading: IconButton(
-            onPressed: () {},
+            onPressed: () {
+              navPop(context);
+            },
             icon: Icon(
               Icons.arrow_back_ios,
               color: blackColor,
@@ -21,10 +69,11 @@ class ChatScreen extends StatelessWidget {
         title: Row(
           // mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const CircleAvatar(
-              radius: 20,
+            CircleAvatar(
+              radius: 18,
               backgroundImage: NetworkImage(
-                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'),
+                recPhoto,
+              ),
             ),
             const SizedBox(
               width: 8,
@@ -33,25 +82,28 @@ class ChatScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'jamiejones',
+                  recName,
                   style: TextStyle(
                       fontFamily: fontFamily,
                       color: blackColor,
-                      fontWeight: FontWeight.w600),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700),
                 ),
                 Text(
                   'Business chat',
                   style: TextStyle(
-                      fontFamily: fontFamily, color: Colors.grey, fontSize: 13),
+                      fontFamily: fontFamily, color: Colors.grey, fontSize: 12),
                 )
               ],
             )
           ],
         ),
-        actions: [
-          IconButton(
-              onPressed: () {}, icon: const Icon(Icons.discount_outlined))
-        ],
+        // actions: [
+        //   IconButton(
+        //     onPressed: () {},
+        //     icon: const Icon(Icons.discount),
+        //   )
+        // ],
       ),
       body: SizedBox(
         height: size.height,
@@ -59,11 +111,9 @@ class ChatScreen extends StatelessWidget {
           children: [
             Container(
               height: size.height,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                   image: DecorationImage(
-                      fit: BoxFit.cover,
-                      image: NetworkImage(
-                          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'))),
+                      fit: BoxFit.cover, image: NetworkImage(recPhoto))),
             ),
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -76,26 +126,59 @@ class ChatScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          'Dec 11 AT 4:37 PM',
-                          style: TextStyle(color: whiteColor),
-                        ),
-                        const CustomMessageNote(
-                          isShare: true,
-                          isMe: false,
-                        ),
-                        const CustomMessageNote(
-                          isShare: false,
-                          isMe: false,
-                        ),
-                        const CustomMessageNote(
-                          isShare: false,
-                          isMe: true,
-                        ),
-                      ],
-                    ),
+                    child: StreamBuilder(
+                        stream: FirebaseFirestore.instance
+                            .collection('chats')
+                            .doc(getConversationId())
+                            .collection('messages')
+                            .orderBy('time', descending: true)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            return ListView.builder(
+                                reverse: true,
+                                itemCount: snapshot.data!.docs.length,
+                                itemBuilder: (context, index) {
+                                  ChatModel chat = ChatModel.fromMap(
+                                      snapshot.data!.docs[index].data());
+                                  bool isMe = chat.senderId ==
+                                          FirebaseAuth.instance.currentUser!.uid
+                                      ? true
+                                      : false;
+                                  bool showDate = index == 0 ||
+                                      chat.time.day !=
+                                          ChatModel.fromMap(snapshot
+                                                  .data!.docs[index - 1]
+                                                  .data())
+                                              .time
+                                              .day;
+                                  return Column(
+                                    children: [
+                                      if (showDate)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 15),
+                                          child: Text(
+                                            chat.time.toString(),
+                                            style: TextStyle(color: whiteColor),
+                                          ),
+                                        ),
+                                      CustomMessageNote(
+                                        isShare: chat.isShare,
+                                        isMe: isMe,
+                                        chatModel: chat,
+                                        conversationId: getConversationId(),
+                                      ),
+                                    ],
+                                  );
+                                });
+                          } else {
+                            return SpinKitThreeBounce(
+                              color: primaryColor,
+                              size: 15,
+                            );
+                          }
+                        }),
                   ),
                   Container(
                     height: 130,
@@ -150,50 +233,158 @@ class ChatScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Row(
-                            children: [
-                              const CircleAvatar(
-                                radius: 20,
-                                backgroundImage: NetworkImage(
-                                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: TextFormField(
-                                    decoration: InputDecoration(
-                                        label: Text(
-                                          'Add a reply',
-                                          style: TextStyle(
-                                              fontFamily: fontFamily,
-                                              color: Colors.grey,
-                                              fontSize: 13),
-                                        ),
-                                        suffixIcon: Icon(
-                                          Icons.mic,
-                                          color: blackColor,
-                                          size: 30,
-                                        ),
-                                        constraints:
-                                            const BoxConstraints(maxHeight: 50),
-                                        border: OutlineInputBorder(
-                                            borderSide: const BorderSide(
-                                                color: Colors.grey),
-                                            borderRadius:
-                                                BorderRadius.circular(19)),
-                                        enabledBorder: OutlineInputBorder(
-                                            borderSide: const BorderSide(
-                                                color: Colors.grey),
-                                            borderRadius:
-                                                BorderRadius.circular(19))),
+                        // CustomRecordChat()
+                        Consumer<NoteProvider>(builder: (context, note, _) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Row(
+                              children: [
+                                if (note.voiceNote == null)
+                                  const CircleAvatar(
+                                    radius: 18,
+                                    backgroundImage: NetworkImage(
+                                        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'),
                                   ),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
+                                Expanded(
+                                  child: note.voiceNote != null
+                                      ? Row(
+                                          children: [
+                                            VoiceMessageView(
+                                                size: 25,
+                                                innerPadding: 0,
+                                                controller: VoiceController(
+                                                    audioSrc:
+                                                        note.voiceNote!.path,
+                                                    maxDuration: const Duration(
+                                                        seconds: 500),
+                                                    isFile: true,
+                                                    onComplete: () {},
+                                                    onPause: () {},
+                                                    onPlaying: () {})),
+                                            IconButton(
+                                              onPressed: () async {
+                                                String chatId =
+                                                    const Uuid().v4();
+                                                String message =
+                                                    await AddNoteController()
+                                                        .uploadFile(
+                                                            'chats',
+                                                            note.voiceNote!,
+                                                            context);
+                                                ChatModel chat = ChatModel(
+                                                    name: userProvider!.name,
+                                                    message: message,
+                                                    senderId: userProvider.uid,
+                                                    chatId: chatId,
+                                                    postOwner: '',
+                                                    time: DateTime.now(),
+                                                    isShare: false,
+                                                    receiverId: recID,
+                                                    messageRead: '',
+                                                    avatarUrl:
+                                                        userProvider.photoUrl);
+                                                ChatController()
+                                                    .sendMessage(
+                                                  chat,
+                                                  chatId,
+                                                  getConversationId(),
+                                                  recName,
+                                                  recPhoto,
+                                                  userProvider.token,
+                                                  recToken,
+                                                )
+                                                    .then((value) {
+                                                  NotificationMethods
+                                                      .sendPushNotification(
+                                                          recToken,
+                                                          '${userProvider.username} send a voice note',
+                                                          userProvider.name);
+                                                  note.removeVoiceNote();
+                                                });
+                                              },
+                                              icon: const Icon(
+                                                  Icons.send_rounded),
+                                              color: blackColor,
+                                              iconSize: 30,
+                                            ),
+                                            Expanded(
+                                              child: IconButton(
+                                                  onPressed: () {
+                                                    note.removeVoiceNote();
+                                                  },
+                                                  icon: Icon(
+                                                    Icons.close,
+                                                    color: blackColor,
+                                                    size: 30,
+                                                  )),
+                                            ),
+                                            const SizedBox(
+                                              width: 4,
+                                            )
+                                          ],
+                                        )
+                                      : Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: TextFormField(
+                                            readOnly: true,
+                                            decoration: InputDecoration(
+                                              hintText: 'Add a reply',
+                                              hintStyle: TextStyle(
+                                                  fontFamily: fontFamily,
+                                                  color: Colors.grey,
+                                                  fontSize: 13),
+                                              // label: Text(
+                                              //   'Add a reply',
+                                              //   style: TextStyle(
+                                              //       fontFamily: fontFamily,
+                                              //       color: Colors.grey,
+                                              //       fontSize: 13),
+                                              // ),
+                                              suffixIcon: GestureDetector(
+                                                onTap: () {
+                                                  if (note
+                                                      .recoder.isRecording) {
+                                                    note.stop();
+                                                  } else {
+                                                    note.record();
+                                                  }
+                                                },
+                                                child: Icon(
+                                                  note.isRecording
+                                                      ? Icons.stop
+                                                      : Icons.mic_none_rounded,
+                                                  color: blackColor,
+                                                  size: 30,
+                                                ),
+                                              ),
+                                              constraints: const BoxConstraints(
+                                                  maxHeight: 45),
+                                              focusedBorder: OutlineInputBorder(
+                                                  borderSide: const BorderSide(
+                                                      color: Colors.grey),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          19)),
+                                              border: OutlineInputBorder(
+                                                  borderSide: const BorderSide(
+                                                      color: Colors.grey),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          19)),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderSide: const BorderSide(
+                                                    color: Colors.grey),
+                                                borderRadius:
+                                                    BorderRadius.circular(19),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                )
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   )
@@ -206,3 +397,193 @@ class ChatScreen extends StatelessWidget {
     );
   }
 }
+
+// class CustomRecordChat extends StatefulWidget {
+//   const CustomRecordChat({super.key});
+
+//   @override
+//   State<CustomRecordChat> createState() => _CustomRecordChatState();
+// }
+
+// class _CustomRecordChatState extends State<CustomRecordChat> {
+//   late final RecorderController recorderController;
+//   late final AudioPlayer audioPlayer;
+
+//   String? path;
+//   String? musicFile;
+//   bool isRecording = false;
+//   bool isRecordingCompleted = false;
+//   bool isLoading = true;
+//   void _initialiseControllers() {
+//     recorderController = RecorderController()
+//       ..androidEncoder = AndroidEncoder.aac
+//       ..androidOutputFormat = AndroidOutputFormat.mpeg4
+//       ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
+//       ..sampleRate = 44100;
+//   }
+
+//   @override
+//   void initState() {
+//     super.initState();
+
+//     _initialiseControllers();
+//     audioPlayer = AudioPlayer();
+//     audioPlayer.onPlayerComplete.listen((event) {
+//       setState(() {
+//         isRecordingCompleted = false;
+//       });
+//     });
+//   }
+
+//   @override
+//   void dispose() {
+//     recorderController.dispose();
+//     audioPlayer.dispose();
+//     super.dispose();
+//   }
+
+//   void _startOrStopRecording() async {
+//     try {
+//       if (isRecording) {
+//         recorderController.reset();
+
+//         path = await recorderController.stop(false);
+
+//         if (path != null) {
+//           isRecordingCompleted = true;
+//           debugPrint(path);
+//           Provider.of<NoteProvider>(context, listen: false)
+//               .setVoiceNote(File(path!));
+//           // await audioPlayer.setSourceDeviceFile(path!);
+//           // await audioPlayer.play(
+//           //   UrlSource(path!),
+//           // );
+
+//           debugPrint("Recorded file size: ${File(path!).lengthSync()}");
+//         }
+//       } else {
+//         await recorderController.record(path: path); // Path is optional
+//       }
+//     } catch (e) {
+//       debugPrint(e.toString());
+//     } finally {
+//       setState(() {
+//         isRecording = !isRecording;
+//       });
+//     }
+//   }
+
+//   void _refreshWave() {
+//     if (isRecording) recorderController.refresh();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     var userProvider = Provider.of<UserProvider>(context, listen: false).user;
+//     return Consumer<NoteProvider>(builder: (context, notePro, _) {
+//       return Row(
+//         children: [
+//           const CircleAvatar(
+//             radius: 18,
+//             backgroundImage: NetworkImage(
+//                 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'),
+//           ),
+//           SizedBox(
+//             width: 3,
+//           ),
+//           if (notePro.voiceNote != null)
+//             VoiceMessageView(
+//                 controller: VoiceController(
+//               audioSrc: notePro.voiceNote!.path,
+//               maxDuration: Duration(seconds: 500),
+//               isFile: true,
+//               onComplete: () {},
+//               onPause: () {},
+//               onPlaying: () {},
+//             )),
+//           if (notePro.voiceNote == null)
+//             AnimatedSwitcher(
+//               duration: const Duration(milliseconds: 200),
+//               child: isRecording
+//                   ? AudioWaveforms(
+//                       enableGesture: true,
+//                       size: Size(MediaQuery.of(context).size.width / 2, 50),
+//                       recorderController: recorderController,
+//                       waveStyle: const WaveStyle(
+//                         waveColor: Colors.black,
+//                         extendWaveform: true,
+//                         showMiddleLine: false,
+//                       ),
+//                       decoration: BoxDecoration(
+//                         borderRadius: BorderRadius.circular(12.0),
+//                         color: whiteColor,
+//                         border: Border.all(width: 1, color: Colors.grey),
+//                       ),
+//                       padding: const EdgeInsets.only(left: 18),
+//                       margin: const EdgeInsets.symmetric(horizontal: 15),
+//                     )
+//                   : Container(
+//                       width: MediaQuery.of(context).size.width * 0.8,
+//                       height: 50,
+//                       child: TextFormField(
+//                         readOnly: true,
+//                         decoration: InputDecoration(
+//                           label: Text(
+//                             'Add a reply',
+//                             style: TextStyle(
+//                                 fontFamily: fontFamily,
+//                                 color: Colors.grey,
+//                                 fontSize: 13),
+//                           ),
+//                           suffixIcon: GestureDetector(
+//                             onTap: _startOrStopRecording,
+//                             child: Icon(
+//                               isRecording ? Icons.stop : Icons.mic_none_rounded,
+//                               color: blackColor,
+//                               size: 30,
+//                             ),
+//                           ),
+//                           // constraints: const BoxConstraints(maxHeight: 45),
+//                           border: OutlineInputBorder(
+//                               borderSide: const BorderSide(color: Colors.grey),
+//                               borderRadius: BorderRadius.circular(19)),
+//                           enabledBorder: OutlineInputBorder(
+//                             borderSide: const BorderSide(color: Colors.grey),
+//                             borderRadius: BorderRadius.circular(19),
+//                           ),
+//                         ),
+//                       ),
+//                     ),
+//             ),
+//           // IconButton(
+//           //   onPressed: _refreshWave,
+//           //   icon: Icon(
+//           //     isRecording ? Icons.refresh : Icons.send,
+//           //     color: Colors.black,
+//           //   ),
+//           // ),
+//           // const SizedBox(width: 16),
+//           // if (!isRecordingCompleted)
+//           //   IconButton(
+//           //     onPressed: _startOrStopRecording,
+//           //     icon: Icon(isRecording ? Icons.stop : Icons.mic),
+//           //     color: Colors.black,
+//           //     iconSize: 28,
+//           //   ),
+//           // if (isRecordingCompleted)
+//           //   IconButton(
+//           //     onPressed: () async {
+//           //       await audioPlayer.stop();
+//           //       setState(() {
+//           //         isRecordingCompleted = false;
+//           //       });
+//           //     },
+//           //     icon: Icon(Icons.stop),
+//           //     color: Colors.black,
+//           //     iconSize: 28,
+//           //   ),
+//         ],
+//       );
+//     });
+//   }
+// }

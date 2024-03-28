@@ -1,8 +1,67 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:social_notes/resources/colors.dart';
+import 'package:social_notes/screens/add_note_screen/model/note_model.dart';
+import 'package:social_notes/screens/search_screen/view/note_details_screen.dart';
+import 'package:social_notes/screens/user_profile/other_user_profile.dart';
 
-class SingleSearchItem extends StatelessWidget {
-  const SingleSearchItem({super.key});
+class SingleSearchItem extends StatefulWidget {
+  const SingleSearchItem(
+      {super.key, required this.noteModel, required this.index});
+  final NoteModel noteModel;
+  final int index;
+
+  @override
+  State<SingleSearchItem> createState() => _SingleSearchItemState();
+}
+
+class _SingleSearchItemState extends State<SingleSearchItem> {
+  late AudioPlayer _audioPlayer;
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioPlayer = AudioPlayer();
+    _audioPlayer.setSourceUrl(widget.noteModel.noteUrl);
+    _audioPlayer.onDurationChanged.listen((event) {
+      setState(() {});
+    });
+    _audioPlayer.onPositionChanged.listen((event) {
+      setState(() {});
+    });
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (state == PlayerState.completed) {
+        setState(() {
+          _isPlaying = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void playPause() {
+    if (_isPlaying) {
+      _audioPlayer.pause();
+    } else {
+      // _audioPlayer.seek(Duration.zero);
+      _audioPlayer.resume();
+    }
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+  }
+
+  // Duration? duration;
+  // getDuration() async {
+  //   duration = await _audioPlayer.getDuration();
+  //   setState(() {});
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +74,20 @@ class SingleSearchItem extends StatelessWidget {
           SizedBox(
             height: size.height * 0.2,
             width: size.width * 0.5,
-            child: Image.network(
-              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D',
-              fit: BoxFit.cover,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OtherUserProfile(
+                        userId: widget.noteModel.userUid,
+                      ),
+                    ));
+              },
+              child: Image.network(
+                widget.noteModel.photoUrl,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
           Positioned(
@@ -27,13 +97,17 @@ class SingleSearchItem extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: whiteColor,
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(35),
               ),
               child: IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.play_circle_fill_outlined,
-                  color: Colors.red,
+                onPressed: playPause,
+                icon: Icon(
+                  _isPlaying ? Icons.pause_circle_filled : Icons.play_arrow,
+                  color: widget.index == 0
+                      ? Colors.red
+                      : widget.index == 1
+                          ? greenColor
+                          : color7,
                 ),
               ),
             ),
@@ -49,35 +123,61 @@ class SingleSearchItem extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Container(
+                          width: size.width * 0.45,
                           decoration: BoxDecoration(
-                              color: primaryColor,
+                              color: widget.index == 0
+                                  ? primaryColor
+                                  : widget.index == 1
+                                      ? greenColor
+                                      : color7,
                               borderRadius: BorderRadius.circular(18)),
                           padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 12),
+                              vertical: 6, horizontal: 8),
                           child: Text(
-                            'Travel & Adventure',
-                            style:
-                                TextStyle(fontFamily: fontFamily, fontSize: 11),
+                            widget.noteModel.topic,
+                            overflow: TextOverflow.ellipsis,
+                            // textAlign: a,
+                            style: TextStyle(
+                                fontFamily: fontFamily,
+                                fontSize: 11,
+                                color: whiteColor),
                           )),
                     ),
                     Positioned(
-                        left: size.width * 0.18,
+                        left: size.width * 0.28,
                         top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                              boxShadow: const [
-                                BoxShadow(
-                                    color: Color(0xffcf4836),
-                                    blurRadius: 4,
-                                    spreadRadius: 1)
-                              ],
-                              color: whiteColor.withOpacity(1),
-                              borderRadius: BorderRadius.circular(18)),
-                          child: Text(
-                            'View Post',
-                            style:
-                                TextStyle(fontFamily: fontFamily, fontSize: 11),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NoteDetailsScreen(
+                                      size: size, note: widget.noteModel),
+                                ));
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 6, horizontal: 10),
+                            decoration: BoxDecoration(
+                                // boxShadow: const [
+                                //   BoxShadow(
+                                //       color: Color(0xffcf4836),
+                                //       blurRadius: 4,
+                                //       spreadRadius: 1)
+                                // ],
+                                color: whiteColor.withOpacity(1),
+                                borderRadius: BorderRadius.circular(18)),
+                            child: Text(
+                              'View Post',
+                              style: TextStyle(
+                                  fontFamily: fontFamily,
+                                  fontSize: 11,
+                                  color: widget.index == 0
+                                      ? primaryColor
+                                      : widget.index == 1
+                                          ? greenColor
+                                          : color7),
+                            ),
                           ),
                         ))
                   ],

@@ -42,6 +42,35 @@ dependencies:
   dio: ^5.4.1
   firebase_core: ^2.25.4
   flutter_spinkit: ^5.2.0
+  image_picker: ^1.0.7
+  uuid: ^3.0.1
+  firebase_storage: ^11.6.7
+  permission_handler: ^11.3.0
+  flutter_sound: ^9.2.13
+  timeago: ^3.6.1
+  audioplayers: ^5.2.1
+  # flutter_hooks: ^0.20.5
+  # animated_loading_border: ^0.0.2
+  http: ^1.2.1
+  file_picker: ^6.2.0
+  open_file: ^3.3.2
+  flutter_archive: ^6.0.0
+  youtube_explode_dart: ^2.1.0
+  toasty_box: ^1.0.4
+  percent_indicator: ^4.2.3
+  # audio_waveforms: ^1.0.5
+  rename: ^2.1.1
+  flutter_audio_waveforms: ^1.2.1+8
+  url_launcher: ^6.2.5
+  google_sign_in: ^6.2.1
+  simple_waveform_progressbar: ^0.0.3
+ 
+  firebase_messaging: ^14.7.20
+  flutter_notification_channel: ^3.1.0
+  audio_waveforms: ^1.0.5
+  audio_progress_bars: ^0.0.1
+  shared_preferences: ^2.2.2
+  
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +82,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/new_app_icon.png"
+  min_sdk_android: 21   
   
 
 # For information on the generic Dart part of this file, see the
@@ -86,6 +121,15 @@ flutter:
     - family: Hell
       fonts:
         - asset: assets/fonts/HelveticaNeue.ttc
+    - family: Steel
+      fonts:
+        - asset: assets/fonts/steelfish rounded bd.otf  
+    - family: Hell-medium
+      fonts:
+        - asset: assets/fonts/Helvetica Neue Medium Extended.otf 
+    - family: Hell-bold
+      fonts:
+        - asset: assets/fonts/Helvetica Neue W01 77 Bd Cn Obl.otf              
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

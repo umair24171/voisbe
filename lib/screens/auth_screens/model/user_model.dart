@@ -1,19 +1,21 @@
-import 'dart:convert';
-
 class UserModel {
-  final String uid;
-  final String username;
-  final String email;
-  final String photoUrl;
-  final List following;
-  final List followers;
-  final String bio;
-  final String link;
-  final String contact;
-  final bool isSubscriptionEnable;
-  final double price;
-  final List soundPacks;
-  final String pushToken;
+  String uid;
+  String name;
+  String username;
+  String email;
+  String photoUrl;
+  List following;
+  List followers;
+  String bio;
+  String link;
+  String contact;
+  bool isSubscriptionEnable;
+  double price;
+  List soundPacks;
+  String token;
+  List subscribedUsers = [];
+  List subscribedSoundPacks = [];
+  String pushToken;
   UserModel(
       {required this.uid,
       required this.username,
@@ -21,8 +23,12 @@ class UserModel {
       required this.photoUrl,
       required this.following,
       required this.pushToken,
+      required this.token,
       required this.bio,
+      required this.subscribedUsers,
       required this.contact,
+      required this.name,
+      required this.subscribedSoundPacks,
       required this.isSubscriptionEnable,
       required this.link,
       required this.price,
@@ -37,8 +43,12 @@ class UserModel {
       'pushToken': pushToken,
       'photoUrl': photoUrl,
       'following': following,
+      'token': token,
+      'name': name,
       'followers': followers,
+      'subscribedUsers': subscribedUsers, // Add this line
       'bio': bio,
+      'subscribedSoundPacks': subscribedSoundPacks,
       'link': link,
       'price': price,
       'contact': contact,
@@ -54,10 +64,14 @@ class UserModel {
         email: map['email'] as String,
         pushToken: map['pushToken'] as String,
         photoUrl: map['photoUrl'] as String,
+        token: map['token'] as String,
         following: List.from((map['following'] as List)),
+        subscribedUsers: List.from((map['subscribedUsers'] as List)),
+        subscribedSoundPacks: List.from((map['subscribedSoundPacks'] as List)),
         bio: map['bio'] as String,
         contact: map['contact'] as String,
         isSubscriptionEnable: map['isSubscriptionEnable'] as bool,
+        name: map['name'] as String,
         link: map['link'] as String,
         price: map['price'] as double,
         soundPacks: List.from(

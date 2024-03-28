@@ -1,289 +1,358 @@
-import 'package:flutter/material.dart';
-import 'package:social_notes/resources/colors.dart';
-import 'package:social_notes/screens/home_screen/view/widgets/animated_text.dart';
-import 'package:social_notes/screens/home_screen/view/widgets/voice_message.dart';
-import 'package:voice_message_package/voice_message_package.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:flutter/cupertino.dart';
 
-class HomeScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+// import 'package:flutter/widgets.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:provider/provider.dart';
+import 'package:social_notes/resources/colors.dart';
+// import 'package:social_notes/screens/add_note_screen.dart/model/note_model.dart';
+import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
+import 'package:social_notes/screens/chat_screen.dart/provider/chat_provider.dart';
+import 'package:social_notes/screens/chat_screen.dart/view/users_screen.dart';
+import 'package:social_notes/screens/home_screen/provider/display_notes_provider.dart';
+import 'package:social_notes/screens/home_screen/provider/filter_provider.dart';
+import 'package:social_notes/screens/home_screen/view/widgets/single_post_note.dart';
+import 'package:social_notes/screens/notifications_screen/notifications_screen.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   static const routeName = '/home';
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration.zero, () {
+      Provider.of<DisplayNotesProvider>(context, listen: false).getAllNotes();
+      Provider.of<FilterProvider>(context, listen: false)
+          .setSelectedFilter('For you');
+      Provider.of<UserProvider>(context, listen: false).getUserData();
+      Provider.of<ChatProvider>(context, listen: false).getAllUsersForChat();
+      // getSoundsOfUnsubscribedUsers();
+    });
+  }
+
+  // getSoundsOfUnsubscribedUsers() {
+  //   var soundPro = Provider.of<SoundProvider>(context, listen: false);
+  //   log('sounds of unsubscribed users ${soundPro.soundPacksMap}');
+  // }
+
+  List<String> topics = [
+    'Need support',
+    'Relationship & love',
+    'Confession & secret',
+    'Inspiration & motivation',
+    'Food & Cooking',
+    'Personal Story',
+    'Business',
+    'Something I learned',
+    'Education & Learning',
+    'Books & Literature',
+    'Spirit & Mind',
+    'Travel & Adventure',
+    'Fashion & Style',
+    'Creativity & Art',
+    'Humor & Comedy',
+    'Sports & Fitness',
+    'Technology & Innovation',
+    'Current Events & News',
+    'Health & Wellness',
+    'Hobbies & Interests'
+  ];
+  @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
+    var provider = Provider.of<DisplayNotesProvider>(
+      context,
+    );
+    var filterProvider = Provider.of<FilterProvider>(context, listen: false);
+    var userProvider = Provider.of<UserProvider>(context, listen: false);
+    // userProvider.getUserData();
+    Provider.of<ChatProvider>(context, listen: false).getAllUsersForChat();
+
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            Text(
-              'For you',
-              style: TextStyle(
-                  fontFamily: fontFamily,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600),
-            ),
-            IconButton(
-                onPressed: () {},
-                icon: Icon(
-                  Icons.keyboard_arrow_down_outlined,
-                  color: blackColor,
-                )),
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    '#Trends2024',
-                    overflow: TextOverflow.fade,
-                    style: TextStyle(
-                        fontFamily: fontFamily,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Row(
+            children: [
+              Consumer<FilterProvider>(builder: (context, filterPro, _) {
+                return Text(
+                  filterPro.selectedFilter,
+                  style: TextStyle(
+                      fontFamily: fontFamilyMedium,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700),
+                );
+              }),
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: 5,
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    showMenu(
+                        color: whiteColor,
+                        context: context,
+                        position: const RelativeRect.fromLTRB(0, 80, 0, 0),
+                        items: [
+                          PopupMenuItem(
+                            onTap: () {
+                              filterProvider.setSelectedFilter('Close Friends');
+                            },
+                            value: 'Close Friends',
+                            child: Row(
+                              children: [
+                                Icon(Icons.group_outlined, color: blackColor),
+                                const SizedBox(
+                                  width: 6,
+                                ),
+                                Text(
+                                  'Close Friends',
+                                  style: TextStyle(fontFamily: fontFamily),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            onTap: () {
+                              filterProvider.setSelectedFilter('Filter Topics');
+                            },
+                            value: 'Filter Topics',
+                            child: Row(
+                              children: [
+                                Icon(Icons.filter_list, color: blackColor),
+                                const SizedBox(
+                                  width: 6,
+                                ),
+                                Text(
+                                  'Filter Topics',
+                                  style: TextStyle(fontFamily: fontFamily),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ]);
+                  },
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_outlined,
+                    color: blackColor,
                   ),
-                  const SizedBox(
-                    width: 6,
-                  ),
-                  Expanded(
-                    child: Text(
-                      '#Trends2024',
-                      overflow: TextOverflow.fade,
-                      style: TextStyle(
-                          fontFamily: fontFamily,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            )
-          ],
-        ),
-        actions: [
-          IconButton(
-              onPressed: () {},
-              icon: Icon(
-                Icons.favorite_border_outlined,
-                color: blackColor,
-              )),
-          IconButton(
-              onPressed: () {},
-              icon: Icon(
-                Icons.send,
-                color: blackColor,
-              ))
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          // crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              child: Align(
-                alignment: Alignment.center,
-                child: SizedBox(
-                  // alignment: Alignment.center,
-                  width: size.width * 0.87,
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: whiteColor,
-                              borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.all(8),
+              Consumer<FilterProvider>(builder: (context, filterPro, _) {
+                return filterPro.selectedFilter.contains('Filter Topics') ||
+                        filterPro.selectedFilter.contains('Close Friends')
+                    ? const Text('')
+                    : Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
                           child: Row(
                             children: [
-                              const CircleAvatar(
-                                radius: 15,
-                                backgroundImage: NetworkImage(
-                                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'),
+                              Text(
+                                '#Trends2024',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontFamily: fontFamily,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600),
                               ),
                               const SizedBox(
-                                width: 5,
+                                width: 6,
                               ),
-                              const Text('jennaotizer'),
-                              Image.network(
-                                'https://media.istockphoto.com/id/1396933001/vector/vector-blue-verified-badge.jpg?s=612x612&w=0&k=20&c=aBJ2JAzbOfQpv2OCSr0k8kYe0XHutOGBAJuVjvWvPrQ=',
-                                height: 20,
-                                width: 20,
-                              )
+                              Expanded(
+                                child: Text(
+                                  '#Trends2024',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontFamily: fontFamily,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                      Positioned(
-                          left: size.width * 0.4,
-                          top: 7,
-                          child: Container(
-                            padding: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                                boxShadow: const [
-                                  BoxShadow(
-                                      color: Color(0xffcf4836),
-                                      blurRadius: 4,
-                                      spreadRadius: 1)
-                                ],
-                                color: primaryColor.withOpacity(1),
-                                borderRadius: BorderRadius.circular(18)),
-                            child: Text(
-                              'Confession or secret',
-                              style: TextStyle(fontFamily: fontFamily),
-                            ),
-                          ))
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const AnimatedText(),
-            VoiceMessageView(
-              controller: VoiceController(
-                audioSrc: 'https://dl.musichi.ir/1401/06/21/Ghors%202.mp3',
-                maxDuration: const Duration(seconds: 0),
-                isFile: false,
-                onComplete: () {},
-                onPause: () {},
-                onPlaying: () {},
-                onError: (err) {},
-              ),
-            ),
-            Align(
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '1 day ago  ',
-                    style: TextStyle(color: whiteColor, fontFamily: fontFamily),
-                  ),
-                  Text(
-                    ' |  ',
-                    style: TextStyle(color: whiteColor),
-                  ),
-                  Text(
-                    'USHER - HERE I AM',
-                    style: TextStyle(fontFamily: fontFamily, color: whiteColor),
-                  )
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.favorite_border,
-                        color: whiteColor,
-                        size: 30,
-                      )),
-                  IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.send,
-                        color: whiteColor,
-                        size: 30,
-                      )),
-                  IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.bookmark_border_sharp,
-                        color: whiteColor,
-                        size: 30,
-                      )),
-                  IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.image_outlined,
-                        color: whiteColor,
-                        size: 30,
-                      )),
-                  IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.more_horiz,
-                        color: whiteColor,
-                        size: 30,
-                      ))
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '4,748 likes',
-                    style: TextStyle(
-                        fontFamily: fontFamily,
-                        color: whiteColor,
-                        fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'View all 348 replies',
-                    style: TextStyle(
-                        fontFamily: fontFamily,
-                        color: whiteColor,
-                        fontWeight: FontWeight.w600),
-                  )
-                ],
-              ),
-            ),
-            Row(
-              children: [
-                Container(
-                  height: 80,
-                  width: 80,
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                      color: whiteColor,
-                      borderRadius: BorderRadius.circular(30)),
-                  child: IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.mic,
-                        color: primaryColor,
-                      )),
-                ),
-                SizedBox(
-                  height: 180,
-                  child: ListView.builder(
-                      shrinkWrap: true,
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        return const Padding(
-                          padding: EdgeInsets.only(top: 50, left: 5),
-                          child: CircleVoiceNotes(),
-                        );
-                      }),
-                ),
-              ],
-            ),
-            SizedBox(
-              height: 140,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: 10,
-                scrollDirection: Axis.horizontal,
-                itemBuilder: (context, index) {
-                  return const CircleVoiceNotes();
+                      );
+              })
+            ],
+          ),
+          actions: [
+            IconButton(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (context) {
+                      return const NotificationScreen();
+                    },
+                  ));
                 },
+                icon: Icon(
+                  Icons.favorite_border_outlined,
+                  color: blackColor,
+                )),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14).copyWith(left: 2),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (context) {
+                      return UsersScreen();
+                    },
+                  ));
+                },
+                child: Image.asset(
+                  'assets/images/navibar_messages.png',
+                  height: 22,
+                  width: 22,
+                ),
               ),
             )
-            // Row(
-            //   children: [
-            //     Container(decoration: Boxde,)
-            //   ],
-            // )
           ],
         ),
-      ),
-    );
+        body: provider.notes.isEmpty
+            ? Center(
+                child: SpinKitThreeBounce(
+                  color: primaryColor,
+                  size: 20,
+                ),
+              )
+            : Stack(
+                children: [
+                  Consumer<FilterProvider>(builder: (context, filterpro, _) {
+                    return Container(
+                      height: MediaQuery.of(context).size.height,
+                      decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: filterpro.selectedFilter
+                                      .contains('Close Friends')
+                                  ? [greenColor, greenColor]
+                                  : [
+                                      const Color(0xffee856d),
+                                      const Color(0xffed6a5a)
+                                    ])),
+                    );
+                  }),
+                  Column(
+                    children: [
+                      Consumer<FilterProvider>(
+                          builder: (context, filterPro, _) {
+                        return !filterProvider.selectedFilter
+                                .contains('Filter Topics')
+                            ? const Text('')
+                            : SizedBox(
+                                height: 50,
+                                child: Stack(
+                                  children:
+                                      List.generate(topics.length, (index) {
+                                    Color? color;
+                                    switch (index % 4) {
+                                      case 0:
+                                        color = Colors.yellow;
+                                        break;
+                                      case 1:
+                                        color = Colors.blue;
+                                        break;
+                                      case 2:
+                                        color = Colors.green;
+                                        break;
+                                      case 3:
+                                        color = Colors.red;
+                                        break;
+                                    }
+                                    int reversedIndex =
+                                        topics.length - index - 1;
+                                    return Positioned(
+                                      left: reversedIndex * 130.0,
+                                      child: Container(
+                                        width: 150,
+                                        alignment: Alignment.center,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 5),
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          borderRadius: const BorderRadius.only(
+                                            topRight: Radius.circular(40),
+                                            bottomRight: Radius.circular(40),
+                                          ),
+                                        ),
+                                        height: 50,
+                                        child: InkWell(
+                                          onTap: () {
+                                            filterPro.searchValue = '';
+                                            filterPro.setSearchingValue(
+                                                topics[reversedIndex]);
+                                          },
+                                          child: Text(
+                                            topics[reversedIndex],
+                                            style: TextStyle(
+                                              fontFamily: fontFamily,
+                                              color: whiteColor,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              );
+                      }),
+                      Expanded(
+                        child: Consumer<FilterProvider>(
+                            builder: (context, filPro, _) {
+                          if (filPro.selectedFilter.contains('Close Friends')) {
+                            filPro.closeFriendsPosts.clear();
+                            for (var element in userProvider.user!.followers) {
+                              for (var note in provider.notes) {
+                                if (element.contains(note.userUid)) {
+                                  filPro.closeFriendsPosts.add(note);
+                                }
+                              }
+                            }
+                          } else if (filPro.selectedFilter
+                              .contains('Filter Topics')) {
+                            filPro.searcheNote.clear();
+                            for (var note in provider.notes) {
+                              if (note.topic.contains(filPro.searchValue)) {
+                                filPro.searcheNote.add(note);
+                              }
+                            }
+                          }
+                          return PageView.builder(
+                              // physics: const BouncingScrollPhysics(),
+                              // reverse: true,
+                              itemCount: filPro.selectedFilter
+                                      .contains('Close Friends')
+                                  ? filPro.closeFriendsPosts.length
+                                  : filPro.selectedFilter
+                                          .contains('Filter Topics')
+                                      ? filPro.searcheNote.length
+                                      : provider.notes.length,
+                              scrollDirection: Axis.vertical,
+                              itemBuilder: (context, index) {
+                                return SingleNotePost(
+                                  size: size,
+                                  note: filPro.selectedFilter
+                                          .contains('Close Friends')
+                                      ? filPro.closeFriendsPosts[index]
+                                      : filPro.selectedFilter
+                                              .contains('Filter Topics')
+                                          ? filPro.searcheNote[index]
+                                          : provider.notes[index],
+                                );
+                              });
+                        }),
+                      ),
+                    ],
+                  )
+                ],
+              ));
   }
 }

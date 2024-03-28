@@ -15,13 +15,17 @@ class CustomFollowing extends StatelessWidget {
           number,
           style: TextStyle(
               color: primaryColor,
-              fontSize: 20,
-              fontFamily: fontFamily,
-              fontWeight: FontWeight.w600),
+              fontSize: 25,
+              fontFamily: fontFamilyMedium,
+              fontWeight: FontWeight.w700),
         ),
         Text(
           text,
-          style: TextStyle(color: primaryColor, fontSize: 14),
+          style: TextStyle(
+              fontFamily: fontFamily,
+              color: primaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600),
         )
       ],
     );
