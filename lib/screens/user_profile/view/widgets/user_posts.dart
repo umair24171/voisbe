@@ -1,7 +1,8 @@
 // import 'package:audioplayers/audioplayers.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 // import 'package:just_waveform/just_waveform.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
@@ -11,14 +12,17 @@ import 'package:social_notes/screens/user_profile/provider/user_profile_provider
 import 'package:social_notes/screens/user_profile/view/widgets/custom_player.dart';
 // import 'package:social_notes/screens/home_screen/view/widgets/voice_message.dart';
 import 'package:social_notes/screens/user_profile/view/widgets/single_post_note.dart';
-import 'package:voice_message_package/voice_message_package.dart';
+// import 'package:voice_message_package/voice_message_package.dart';
 
 class UserPosts extends StatelessWidget {
   UserPosts({super.key});
 
   List<NoteModel> pinnedPosts = [];
   List<NoteModel> nonPinnedPosts = [];
-  final GlobalKey _popupKey = GlobalKey();
+  // final GlobalKey _popupKey = GlobalKey();
+
+  final ScrollController _scrollController = ScrollController();
+  final double _autoplayThreshold = 200.0;
 
   @override
   Widget build(BuildContext context) {
@@ -114,238 +118,152 @@ class UserPosts extends StatelessWidget {
 
     return Column(
       children: [
-        SizedBox(
-          height: 88,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: userPosts.length >= 3 ? 3 : userPosts.length,
-            itemBuilder: (context, index) {
-              return index == 0
-                  ? CustomProgressPlayer(
-                      mainWidth: 160,
-                      mainHeight: 100,
-                      height: 50,
-                      width: 70,
-                      noteUrl: userPosts[index].noteUrl)
-                  : GestureDetector(
-                      // key: _popupKey,
-                      onTapDown: (TapDownDetails details) {
-                        _tapPosition = details.globalPosition;
-                      },
-                      onTap: () {
-                        if (userPosts[index].userUid ==
-                            FirebaseAuth.instance.currentUser!.uid) {
-                          final RenderBox overlay = Overlay.of(context)
-                              .context
-                              .findRenderObject() as RenderBox;
-                          showMenu(
-                              context: context,
-                              position: RelativeRect.fromRect(
-                                _tapPosition &
-                                    Size(40, 40), // The size of the tap area
-                                Offset.zero &
-                                    overlay.size, // The full size of the screen
-                              ),
-                              items: [
-                                PopupMenuItem(
-                                  onTap: () {
-                                    var isPinned = userPosts[index].isPinned;
-
-                                    Provider.of<UserProfileProvider>(context,
-                                            listen: false)
-                                        .pinPost(
-                                            userPosts[index].noteId, !isPinned);
-                                  },
-                                  child: Text(
-                                    userPosts[index].isPinned
-                                        ? 'Unpin'
-                                        : 'Pinn Post',
-                                    style: TextStyle(fontFamily: fontFamily),
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              NoteDetailsScreen(
-                                                  size: MediaQuery.of(context)
-                                                      .size,
-                                                  note: userPosts[index]),
-                                        ),
-                                      );
-                                    },
-                                    child: Text(
-                                      'View Post',
-                                      style: TextStyle(fontFamily: fontFamily),
-                                    )),
-                                PopupMenuItem(
-                                    onTap: () {
-                                      Provider.of<UserProfileProvider>(context,
-                                              listen: false)
-                                          .deletePost(userPosts[index].noteId);
-                                    },
-                                    child: Text(
-                                      'Delete',
-                                      style: TextStyle(fontFamily: fontFamily),
-                                    )),
-                              ]);
-                        }
-                      },
-                      // onTap: () {
-                      // if (userPosts[index].userUid ==
-                      //     FirebaseAuth.instance.currentUser!.uid) {
-                      //   showMenu(
-                      //       context: context,
-                      //       position: const RelativeRect.fromLTRB(0, 0, 0, 0),
-                      //       items: [
-                      //         PopupMenuItem(
-                      //           onTap: () {
-                      // var isPinned = userPosts[index].isPinned;
-
-                      // Provider.of<UserProfileProvider>(context,
-                      //         listen: false)
-                      //     .pinPost(
-                      //         userPosts[index].noteId, !isPinned);
-                      //             },
-                      //             child: Text(
-                      //               userPosts[index].isPinned
-                      //                   ? 'Unpin'
-                      //                   : 'Pinn Post',
-                      //               style: TextStyle(fontFamily: fontFamily),
-                      //             ),
-                      //           ),
-                      //           PopupMenuItem(
-                      //               onTap: () {
-                      // Navigator.of(context)
-                      //     .push(MaterialPageRoute(
-                      //   builder: (context) => NoteDetailsScreen(
-                      //       size: MediaQuery.of(context).size,
-                      //       note: userPosts[index]),
-                      // ));
-                      //               },
-                      //               child: Text(
-                      //                 'View Post',
-                      //                 style: TextStyle(fontFamily: fontFamily),
-                      //               )),
-                      //           PopupMenuItem(
-                      //               onTap: () {
-                      // Provider.of<UserProfileProvider>(context,
-                      //         listen: false)
-                      //     .deletePost(userPosts[index].noteId);
-                      //               },
-                      //               child: Text(
-                      //                 'Delete',
-                      //                 style: TextStyle(fontFamily: fontFamily),
-                      //               )),
-                      //         ]);
-                      //   }
-                      // },
-                      child: SinglePostNote(
-                        note: userPosts[index],
-                        isPinned: userPosts[index].isPinned,
-                      ),
-                    );
-            },
+        if (userPosts.isEmpty)
+          SizedBox(
+            height: 130,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/No posts.svg',
+                  height: 94,
+                  width: 94,
+                ),
+                const SizedBox(
+                  height: 10,
+                  // width: 94,
+                ),
+                Text(
+                  'No posts yet',
+                  style: TextStyle(
+                      fontFamily: fontFamily,
+                      fontSize: 14,
+                      color: whiteColor,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
           ),
-        ),
-        GridView.builder(
-          itemCount: userPosts.length >= 3 ? userPosts.length - 3 : 0,
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              // crossAxisSpacing: 3,
-              crossAxisCount: 4,
-              mainAxisExtent: 90,
-              mainAxisSpacing: 2),
-          itemBuilder: (context, index) {
-            return
-                // index == 0
-                //     ? CustomWaveformPlayer(audioUrl: userPosts[index].noteUrl)
-                //     :
-                GestureDetector(
-              onTap: () {
-                if (userPosts[index + 3].userUid ==
-                    FirebaseAuth.instance.currentUser!.uid) {
-                  showMenu(
-                      context: context,
-                      position: const RelativeRect.fromLTRB(0, 0, 0, 0),
-                      items: [
-                        PopupMenuItem(
-                          onTap: () {
-                            var isPinned = userPosts[index + 3].isPinned;
+        if (userPosts.isNotEmpty)
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: userPosts.length >= 3 ? 3 : userPosts.length,
+              itemBuilder: (context, index) {
+                return index == 0
+                    ? CustomProgressPlayer(
+                        mainWidth: 180,
+                        mainHeight: 100,
+                        height: 50,
+                        width: 55,
+                        isMainPlayer: true,
+                        waveColor: primaryColor,
+                        noteUrl: userPosts[index].noteUrl)
+                    : GestureDetector(
+                        // key: _popupKey,
+                        // onTapDown: (TapDownDetails details) {
+                        //   _tapPosition = details.globalPosition;
+                        // },
+                        onLongPress: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => NoteDetailsScreen(
+                                  size: MediaQuery.of(context).size,
+                                  note: userPosts[index]),
+                            ),
+                          );
+                        },
+                        onTap: () {
+                          if (userPosts[index].userUid ==
+                              FirebaseAuth.instance.currentUser!.uid) {
+                            var isPinned = userPosts[index].isPinned;
 
                             Provider.of<UserProfileProvider>(context,
                                     listen: false)
-                                .pinPost(
-                                    userPosts[index + 3].noteId, !isPinned);
-                          },
-                          child: Text(
-                            userPosts[index + 3].isPinned
-                                ? 'Unpin'
-                                : 'Pinn Post',
-                            style: TextStyle(fontFamily: fontFamily),
-                          ),
+                                .pinPost(userPosts[index].noteId, !isPinned);
+                          }
+                        },
+                        // onTap: () {
+
+                        child: SinglePostNote(
+                          isGridViewPost: false,
+                          note: userPosts[index],
+                          isPinned: userPosts[index].isPinned,
                         ),
-                        PopupMenuItem(
-                            onTap: () {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) => NoteDetailsScreen(
-                                    size: MediaQuery.of(context).size,
-                                    note: userPosts[index + 3]),
-                              ));
-                            },
-                            child: Text(
-                              'View Post',
-                              style: TextStyle(fontFamily: fontFamily),
-                            )),
-                        PopupMenuItem(
-                            onTap: () {
-                              Provider.of<UserProfileProvider>(context,
-                                      listen: false)
-                                  .deletePost(userPosts[index + 3].noteId);
-                            },
-                            child: Text(
-                              'Delete',
-                              style: TextStyle(fontFamily: fontFamily),
-                            )),
-                      ]);
-                }
+                      );
               },
-              child: SinglePostNote(
-                note: userPosts[index + 3],
-                isPinned: userPosts[index + 3].isPinned,
-              ),
-            );
-          },
-        )
+            ),
+          ),
+        if (userPosts.isNotEmpty)
+          GridView.builder(
+            itemCount: userPosts.length >= 3 ? userPosts.length - 3 : 0,
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                // crossAxisSpacing: 3,
+                crossAxisCount: 4,
+                mainAxisExtent: 120,
+                mainAxisSpacing: 2),
+            itemBuilder: (context, index) {
+              return
+                  // index == 0
+                  //     ? CustomWaveformPlayer(audioUrl: userPosts[index].noteUrl)
+                  //     :
+                  GestureDetector(
+                onLongPress: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => NoteDetailsScreen(
+                          size: MediaQuery.of(context).size,
+                          note: userPosts[index + 3]),
+                    ),
+                  );
+                },
+                onTap: () {
+                  if (userPosts[index + 3].userUid ==
+                      FirebaseAuth.instance.currentUser!.uid) {
+                    var isPinned = userPosts[index + 3].isPinned;
+
+                    Provider.of<UserProfileProvider>(context, listen: false)
+                        .pinPost(userPosts[index + 3].noteId, !isPinned);
+                  }
+                },
+                child: SinglePostNote(
+                  isGridViewPost: true,
+                  note: userPosts[index + 3],
+                  isPinned: userPosts[index + 3].isPinned,
+                ),
+              );
+            },
+          )
       ],
     );
   }
 }
 
-class CustomPlayer extends StatefulWidget {
-  const CustomPlayer({super.key, required this.audioSrc});
-  final String audioSrc;
+// class CustomPlayer extends StatefulWidget {
+//   const CustomPlayer({super.key, required this.audioSrc});
+//   final String audioSrc;
 
-  @override
-  State<CustomPlayer> createState() => _CustomPlayerState();
-}
+//   @override
+//   State<CustomPlayer> createState() => _CustomPlayerState();
+// }
 
-class _CustomPlayerState extends State<CustomPlayer> {
-  @override
-  Widget build(BuildContext context) {
-    return VoiceMessageView(
-        innerPadding: 4,
-        controller: VoiceController(
-            audioSrc: widget.audioSrc,
-            maxDuration: const Duration(seconds: 1000),
-            isFile: false,
-            onComplete: () {},
-            onPause: () {},
-            onPlaying: () {}));
-  }
-}
+// class _CustomPlayerState extends State<CustomPlayer> {
+//   @override
+//   Widget build(BuildContext context) {
+//     return VoiceMessageView(
+//         innerPadding: 4,
+//         controller: VoiceController(
+//             audioSrc: widget.audioSrc,
+//             maxDuration: const Duration(seconds: 1000),
+//             isFile: false,
+//             onComplete: () {},
+//             onPause: () {},
+//             onPlaying: () {}));
+//   }
+// }
 
 // class CustomPlayer extends StatefulWidget {
 //   CustomPlayer({Key? key, required this.note}) : super(key: key);

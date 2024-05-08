@@ -23,6 +23,7 @@ class UpdateProfileController {
     double price,
     List soundPacks,
     String photoUrl,
+    DateTime dateOfBirth,
     context,
   ) async {
     try {
@@ -37,6 +38,7 @@ class UpdateProfileController {
         'isSubscriptionEnable': subscritpion,
         'price': price,
         'soundPacks': soundPacks,
+        'dateOfBirth': dateOfBirth
       });
       Provider.of<UserProvider>(context, listen: false).setUserLoading(false);
     } catch (e) {

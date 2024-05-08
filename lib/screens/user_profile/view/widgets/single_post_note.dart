@@ -3,6 +3,7 @@
 import 'package:audioplayers/audioplayers.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 // import 'package:flutter/widgets.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 
@@ -10,17 +11,22 @@ import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/screens/add_note_screen/model/note_model.dart';
 
 class SinglePostNote extends StatefulWidget {
-  const SinglePostNote({super.key, required this.note, required this.isPinned});
+  const SinglePostNote(
+      {super.key,
+      required this.note,
+      required this.isPinned,
+      required this.isGridViewPost});
   final NoteModel note;
   final bool isPinned;
+  final bool isGridViewPost;
   @override
   State<SinglePostNote> createState() => _SinglePostNoteState();
 }
 
 class _SinglePostNoteState extends State<SinglePostNote> {
   late AudioPlayer _audioPlayer;
+  String? _cachedFilePath;
   bool _isPlaying = false;
-  PlayerState? _playerState;
 
   @override
   void initState() {
@@ -28,17 +34,12 @@ class _SinglePostNoteState extends State<SinglePostNote> {
     _audioPlayer = AudioPlayer();
     _audioPlayer.setReleaseMode(ReleaseMode.stop);
     _audioPlayer.setSourceUrl(widget.note.noteUrl);
-    _playerState = _audioPlayer.state;
-    // _audioPlayer.getDuration().then(
-    //       (value) => setState(() {
-    //         duration = value;
-    //       }),
-    //     );
-    // _audioPlayer.getCurrentPosition().then(
-    //       (value) => setState(() {
-    //         position = value;
-    //       }),
-    //     );
+    // Check if the file is already cached
+    DefaultCacheManager().getFileFromCache(widget.note.noteUrl).then((file) {
+      if (file != null && file.file.existsSync()) {
+        _cachedFilePath = file.file.path;
+      }
+    });
     _audioPlayer.onDurationChanged.listen((event) {
       setState(() {
         duration = event;
@@ -50,15 +51,12 @@ class _SinglePostNoteState extends State<SinglePostNote> {
       });
     });
 
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (state == PlayerState.completed) {
-        setState(() {
-          _isPlaying = false;
-        });
-      }
+    _audioPlayer.onPlayerComplete.listen((state) {
+      setState(() {
+        _isPlaying = false;
+      });
     });
   }
-
   // @override
   // void didChangeDependencies() {
   //   getDuration();
@@ -73,13 +71,32 @@ class _SinglePostNoteState extends State<SinglePostNote> {
 
   void playPause() async {
     if (_isPlaying) {
-      _audioPlayer.pause();
+      await _audioPlayer.pause();
     } else {
-      _audioPlayer.resume();
+      if (_cachedFilePath != null) {
+        _audioPlayer.setReleaseMode(ReleaseMode.stop);
+        await _audioPlayer.setPlaybackRate(1); // Set playback speed
+        await _audioPlayer.play(UrlSource(_cachedFilePath!));
+
+        // updatePlayedComment();
+      } else {
+        // Cache the file if not already cached
+        _audioPlayer.setReleaseMode(ReleaseMode.stop);
+        DefaultCacheManager()
+            .downloadFile(widget.note.noteUrl)
+            .then((fileInfo) {
+          if (fileInfo.file.existsSync()) {
+            _cachedFilePath = fileInfo.file.path;
+            _audioPlayer.setPlaybackRate(1); // Set playback speed
+            _audioPlayer.play(
+              UrlSource(_cachedFilePath!),
+            );
+          }
+        });
+      }
     }
-    setState(() async {
+    setState(() {
       _isPlaying = !_isPlaying;
-      // duration = await _audioPlayer.getDuration();
     });
   }
 
@@ -95,129 +112,119 @@ class _SinglePostNoteState extends State<SinglePostNote> {
     setState(() {});
   }
 
+  String getReverseDuration(Duration position, Duration totalDuration) {
+    int remainingSeconds = totalDuration.inSeconds - position.inSeconds;
+    int minutes = remainingSeconds ~/ 60;
+    int seconds = remainingSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  String getInitialDurationnText(Duration totalDuration) {
+    int remainingSeconds = totalDuration.inSeconds;
+    int minutes = remainingSeconds ~/ 60;
+    int seconds = remainingSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     // getDuration();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 0),
       child: CircularPercentIndicator(
         radius: 44.0,
         lineWidth: 5.0,
         percent: position.inSeconds / duration.inSeconds,
         center: Container(
-          width: 79,
-          height: 79,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             color: whiteColor,
-            borderRadius: BorderRadius.circular(35),
+            borderRadius: BorderRadius.circular(50),
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (!widget.isPinned)
-                const SizedBox(
-                  height: 10,
+              if (!widget.isPinned && !widget.isGridViewPost)
+                SizedBox(
+                  height: widget.isGridViewPost ? 0 : 10,
                 ),
+              // if (widget.isGridViewPost)
+              //   SizedBox(
+              //     height: 0,
+              //   ),
               if (widget.isPinned)
                 Icon(
                   Icons.push_pin,
                   color: primaryColor,
                   size: 12,
                 ),
-              IconButton(
-                onPressed: playPause,
-                icon: Icon(
-                  _isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_fill,
-                  color: primaryColor,
-                  size: 35,
+              if (widget.isGridViewPost)
+                Text(
+                  widget.note.title.toUpperCase(),
+                  style: TextStyle(
+                      fontFamily: fontFamily, fontSize: 9, color: primaryColor),
+                ),
+              SizedBox(
+                height: 5,
+              ),
+              InkWell(
+                splashColor: Colors.transparent,
+                onTap: playPause,
+                child: Container(
+                  // height: 10,
+                  // width: 10,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(20)),
+                  child: Icon(
+                    _isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: whiteColor,
+                    size: 20,
+                  ),
                 ),
               ),
-              Text(
-                '${position.inSeconds}:${duration.inSeconds}',
-                style: TextStyle(
-                    fontFamily: fontFamily, fontSize: 8, color: primaryColor),
+              SizedBox(
+                height: 5,
               ),
+
+              // IconButton(
+              //   onPressed: playPause,
+              //   icon: Icon(
+              //     _isPlaying
+              //         ? Icons.pause_circle_filled
+              //         : Icons.play_circle_fill,
+              //     color: primaryColor,
+              //     size: 35,
+              //   ),
+              // ),
+              position.inSeconds == 0
+                  ? Text(
+                      getInitialDurationnText(duration),
+                      style: TextStyle(
+                          fontFamily: fontFamily,
+                          fontSize: 8,
+                          color: primaryColor),
+                    )
+                  : Text(
+                      getReverseDuration(position, duration),
+                      style: TextStyle(
+                          fontFamily: fontFamily,
+                          fontSize: 8,
+                          color: primaryColor),
+                    ),
             ],
           ),
         ),
         circularStrokeCap: CircularStrokeCap.round,
-        backgroundColor: whiteColor,
+        backgroundColor: _isPlaying ? whiteColor : primaryColor,
         progressColor: primaryColor,
         animation: _isPlaying,
         animationDuration: duration.inSeconds,
       ),
     );
-
-    // Padding(
-    //   padding: const EdgeInsets.symmetric(horizontal: 5),
-    //   child: Stack(
-    //     children: [
-    //       Container(
-    //         height: 140,
-    //         width: 100,
-    //         decoration: BoxDecoration(
-    //           borderRadius: BorderRadius.circular(55),
-    //           // border: Border.all(width: 3, color: primaryColor),
-    //         ),
-    //         child: CircleAvatar(
-    //           radius: 35,
-    //           backgroundColor: whiteColor,
-    //         ),
-    //       ),
-    //       Positioned(
-    //         top: 11,
-    //         left: 15,
-    //         child: Column(
-    //           mainAxisAlignment: MainAxisAlignment.start,
-    //           children: [
-    //             // IconButton(
-    //             //     onPressed: playPause,
-    //             //     icon: Icon(
-    //             //       _isPlaying
-    //             //           ? Icons.pause_circle_filled
-    //             //           : Icons.play_circle_fill,
-    //             //       color: primaryColor,
-    //             //       size: 35,
-    //             //     )),
-    //             Text(
-    //               duration != null ? '${duration!.inSeconds}s' : '0s',
-    //               style: TextStyle(
-    //                   fontFamily: fontFamily, fontSize: 8, color: primaryColor),
-    //             ),
-    //           ],
-    //         ),
-    //       ),
-    //       Positioned(
-    //         top: 0,
-    //         left: 0,
-    //         child: CircularPercentIndicator(
-    //           radius: 50.0,
-    //           lineWidth: 5.0,
-    //           percent: position != null
-    //               ? position!.inSeconds / duration!.inSeconds
-    //               : 0.0,
-    //           center: IconButton(
-    //             onPressed: playPause,
-    //             icon: Icon(
-    //               _isPlaying
-    //                   ? Icons.pause_circle_filled
-    //                   : Icons.play_circle_fill,
-    //               color: primaryColor,
-    //               size: 35,
-    //             ),
-    //           ),
-    //           circularStrokeCap: CircularStrokeCap.round,
-    //           backgroundColor: Colors.grey,
-    //           progressColor: Colors.blue,
-    //           animation: _isPlaying,
-    //           animationDuration: duration!.inSeconds,
-    //         ),
-    //       ),
-    //     ],
-    //   ),
-    // );
   }
 }

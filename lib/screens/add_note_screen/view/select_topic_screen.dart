@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 // import 'package:flutter/widgets.dart';
 import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/resources/navigation.dart';
+import 'package:social_notes/resources/white_overlay_popup.dart';
 import 'package:social_notes/screens/add_note_screen/provider/note_provider.dart';
 // import 'package:social_notes/resources/navigation.dart';
 import 'package:social_notes/screens/add_note_screen/view/add_hashtags_screen.dart';
@@ -96,15 +97,18 @@ class _SelectTopicScreenState extends State<SelectTopicScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'ADD 1 TOPIC',
-                      style: TextStyle(
-                          color: whiteColor,
-                          fontFamily: fontFamily,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 30),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'ADD 1 TOPIC',
+                        style: TextStyle(
+                            color: whiteColor,
+                            fontFamily: fontFamily,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                   Padding(
@@ -119,7 +123,8 @@ class _SelectTopicScreenState extends State<SelectTopicScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Wrap(
-                            spacing: 15,
+                            spacing: 3,
+                            alignment: WrapAlignment.center,
                             children: topics.asMap().entries.map((entry) {
                               int index = entry.key;
                               String topic = entry.value;
@@ -127,9 +132,6 @@ class _SelectTopicScreenState extends State<SelectTopicScreen> {
                                   colors
                                       .length]; // Use modulo to repeat colors if topics exceed colors
                               return ChoiceChip(
-                                // pressElevation: 0,
-                                // clipBehavior: Clip.none,
-
                                 selectedColor: color,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),
@@ -147,7 +149,9 @@ class _SelectTopicScreenState extends State<SelectTopicScreen> {
                                 backgroundColor: color,
                                 labelStyle: TextStyle(color: blackColor),
                                 showCheckmark: false,
-                                selected: _selectedOption.contains(topic),
+                                selected: false,
+                                pressElevation: 0,
+                                surfaceTintColor: Colors.transparent,
                                 onSelected: (bool selected) {
                                   setState(() {
                                     if (selected) {
@@ -225,17 +229,25 @@ class _SelectTopicScreenState extends State<SelectTopicScreen> {
                                 backgroundColor:
                                     MaterialStatePropertyAll(whiteColor)),
                             onPressed: () {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (context) {
-                                  return AddHashtagsScreen(
-                                    title: widget.title,
-                                    taggedPeople: widget.taggedPeople,
-                                    selectedTopic: _selectedOption.isEmpty
-                                        ? ''
-                                        : _selectedOption,
-                                  );
-                                },
-                              ));
+                              if (_selectedOption.isNotEmpty) {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) {
+                                    return AddHashtagsScreen(
+                                      title: widget.title,
+                                      taggedPeople: widget.taggedPeople,
+                                      topicColor: colors[
+                                          topics.indexOf(_selectedOption)],
+                                      selectedTopic: _selectedOption,
+                                    );
+                                  },
+                                ));
+                              } else {
+                                showWhiteOverlayPopup(
+                                    context, Icons.error_outline, null,
+                                    title: 'Error',
+                                    message: 'Please select a topic',
+                                    isUsernameRes: false);
+                              }
                             },
                             label: Text(
                               'Next',

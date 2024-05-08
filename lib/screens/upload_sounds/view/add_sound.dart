@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/resources/navigation.dart';
-import 'package:social_notes/resources/show_snack.dart';
+// import 'package:social_notes/resources/show_snack.dart';
 import 'package:social_notes/screens/add_note_screen/model/saved_note_model.dart';
 import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
 import 'package:social_notes/screens/profile_screen/model/sound_pack_model.dart';
 // import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
 import 'package:social_notes/screens/upload_sounds/provider/sound_provider.dart';
+import 'package:social_notes/screens/user_profile/other_user_profile.dart';
 import 'package:social_notes/screens/user_profile/view/widgets/custom_player.dart';
 import 'package:uuid/uuid.dart';
-import 'package:voice_message_package/voice_message_package.dart';
 
 class AddSound extends StatelessWidget {
   const AddSound({super.key});
@@ -107,17 +107,21 @@ class AddSound extends StatelessWidget {
                   BoxConstraints(maxHeight: 35, maxWidth: size.width * 0.8),
               fillColor: Colors.grey[300],
               filled: true,
+              contentPadding: const EdgeInsets.only(top: 10),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
               prefixIcon: const Icon(
                 Icons.search,
                 color: Colors.grey,
+                size: 20,
               ),
-              label: Text(
-                'Search',
-                style: TextStyle(fontFamily: fontFamily, color: Colors.grey),
-              ),
+              hintText: 'Search',
+              hintStyle: TextStyle(fontFamily: fontFamily, color: Colors.grey),
+              // label: Text(
+              //   'Search',
+              //   style: TextStyle(fontFamily: fontFamily, color: Colors.grey),
+              // ),
             ),
           ),
           const SizedBox(
@@ -198,25 +202,52 @@ class SingleAddSound extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: Row(
+              children: [
+                Text(
+                  soundPackModel.soundPackName,
+                  style: TextStyle(
+                      color: blackColor,
+                      fontFamily: fontFamily,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(
+                  width: 10,
+                ),
+                if (soundPackModel.soundPackType.name.contains('premium'))
+                  Text(
+                    soundPackModel.soundPackType.name,
+                    style: TextStyle(color: primaryColor),
+                  )
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 4,
+          ),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        OtherUserProfile(userId: soundPackModel.userId),
+                  ));
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: Text(
                 soundPackModel.username,
                 style: TextStyle(
-                    color: blackColor,
+                    color: primaryColor,
                     fontFamily: fontFamily,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600),
               ),
-              const SizedBox(
-                width: 10,
-              ),
-              if (soundPackModel.soundPackType.name.contains('premium'))
-                Text(
-                  soundPackModel.soundPackType.name,
-                  style: TextStyle(color: primaryColor),
-                )
-            ],
+            ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -225,7 +256,7 @@ class SingleAddSound extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 0),
                 child: CustomProgressPlayer(
                   noteUrl: soundPackModel.soundPackUrl,
-                  height: 50,
+                  height: 35,
                   width: 130,
                   mainWidth: 250,
                   mainHeight: 70,
@@ -304,16 +335,18 @@ class SingleAddSound extends StatelessWidget {
                               .setVoiceUrl(soundPackModel.soundPackUrl);
                           navPop(context);
                         } else {
-                          showSnackBar(context,
-                              'Please subscribe to the user to access this sound');
+                          // showSnackBar(context,
+                          //     'Please subscribe to the user to access this sound');
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 9),
                         decoration: BoxDecoration(
                             color: blackColor,
                             borderRadius: BorderRadius.circular(16)),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.add,

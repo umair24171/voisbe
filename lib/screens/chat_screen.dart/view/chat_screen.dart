@@ -1,15 +1,18 @@
 // import 'dart:async';
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 // import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/resources/navigation.dart';
@@ -24,7 +27,7 @@ import 'package:social_notes/screens/chat_screen.dart/view/widgets/custom_messag
 import 'package:uuid/uuid.dart';
 import 'package:voice_message_package/voice_message_package.dart';
 
-class ChatScreen extends StatelessWidget {
+class ChatScreen extends StatefulWidget {
   const ChatScreen(
       {super.key,
       this.receiverUser,
@@ -40,20 +43,55 @@ class ChatScreen extends StatelessWidget {
   final String? rectoken;
 
   @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  StreamSubscription? allMessages;
+  String getConversationId() {
+    var userProvider = Provider.of<UserProvider>(context, listen: false).user;
+    String recID = widget.receiverUser == null
+        ? widget.receiverId!
+        : widget.receiverUser!.uid;
+    return userProvider!.uid.hashCode <= recID.hashCode
+        ? '${userProvider.uid}_${recID}'
+        : '${recID}_${userProvider.uid}';
+  }
+
+  QuerySnapshot<Map<String, dynamic>>? messagesSnapshots;
+
+  @override
+  void initState() {
+    super.initState();
+    allMessages = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(getConversationId())
+        .collection('messages')
+        .orderBy('time', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      setState(() {
+        messagesSnapshots = snapshot;
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
     var userProvider = Provider.of<UserProvider>(context, listen: false).user;
-    String recID = receiverUser == null ? receiverId! : receiverUser!.uid;
-    String recName = receiverUser == null ? receiverName! : receiverUser!.name;
-    String recPhoto =
-        receiverUser == null ? receiverPhotoUrl! : receiverUser!.photoUrl;
-    String recToken = receiverUser == null ? rectoken! : receiverUser!.token;
-
-    String getConversationId() {
-      return userProvider!.uid.hashCode <= recID.hashCode
-          ? '${userProvider.uid}_${recID}'
-          : '${recID}_${userProvider.uid}';
-    }
+    String recID = widget.receiverUser == null
+        ? widget.receiverId!
+        : widget.receiverUser!.uid;
+    String recName = widget.receiverUser == null
+        ? widget.receiverName!
+        : widget.receiverUser!.name;
+    String recPhoto = widget.receiverUser == null
+        ? widget.receiverPhotoUrl!
+        : widget.receiverUser!.photoUrl;
+    String recToken = widget.receiverUser == null
+        ? widget.rectoken!
+        : widget.receiverUser!.token;
 
     return Scaffold(
       appBar: AppBar(
@@ -134,42 +172,54 @@ class ChatScreen extends StatelessWidget {
                             .orderBy('time', descending: true)
                             .snapshots(),
                         builder: (context, snapshot) {
-                          if (snapshot.hasData) {
+                          if (messagesSnapshots != null) {
                             return ListView.builder(
                                 reverse: true,
                                 itemCount: snapshot.data!.docs.length,
                                 itemBuilder: (context, index) {
+                                  DateTime? previousDate;
                                   ChatModel chat = ChatModel.fromMap(
                                       snapshot.data!.docs[index].data());
                                   bool isMe = chat.senderId ==
                                           FirebaseAuth.instance.currentUser!.uid
                                       ? true
                                       : false;
-                                  bool showDate = index == 0 ||
-                                      chat.time.day !=
-                                          ChatModel.fromMap(snapshot
-                                                  .data!.docs[index - 1]
-                                                  .data())
-                                              .time
-                                              .day;
-                                  return Column(
-                                    children: [
-                                      if (showDate)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 15),
-                                          child: Text(
-                                            chat.time.toString(),
-                                            style: TextStyle(color: whiteColor),
+                                  // var format = DateFormat.yMd('ar');
+                                  String formattedDateTime =
+                                      DateFormat().format(chat.time);
+                                  bool showDate = previousDate == null ||
+                                      previousDate
+                                              .difference(chat.time)
+                                              .inDays !=
+                                          0;
+                                  previousDate = chat.time;
+
+                                  // DateFormat('yyyy-MM-dd – kk:mm')
+                                  //     .format(chat.time);
+                                  final key = ValueKey<String>(
+                                      'comment_${chat.chatId}');
+                                  return KeyedSubtree(
+                                    key: key,
+                                    child: Column(
+                                      children: [
+                                        if (showDate)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 15),
+                                            child: Text(
+                                              formattedDateTime,
+                                              style:
+                                                  TextStyle(color: whiteColor),
+                                            ),
                                           ),
+                                        CustomMessageNote(
+                                          isShare: chat.isShare,
+                                          isMe: isMe,
+                                          chatModel: chat,
+                                          conversationId: getConversationId(),
                                         ),
-                                      CustomMessageNote(
-                                        isShare: chat.isShare,
-                                        isMe: isMe,
-                                        chatModel: chat,
-                                        conversationId: getConversationId(),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   );
                                 });
                           } else {
@@ -240,10 +290,11 @@ class ChatScreen extends StatelessWidget {
                             child: Row(
                               children: [
                                 if (note.voiceNote == null)
-                                  const CircleAvatar(
+                                  CircleAvatar(
                                     radius: 18,
                                     backgroundImage: NetworkImage(
-                                        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cHJvZmlsZXxlbnwwfHwwfHx8MA%3D%3D'),
+                                      userProvider!.photoUrl,
+                                    ),
                                   ),
                                 Expanded(
                                   child: note.voiceNote != null
@@ -261,8 +312,12 @@ class ChatScreen extends StatelessWidget {
                                                     onComplete: () {},
                                                     onPause: () {},
                                                     onPlaying: () {})),
-                                            IconButton(
-                                              onPressed: () async {
+                                            const SizedBox(
+                                              width: 3,
+                                            ),
+                                            GestureDetector(
+                                              onTap: () async {
+                                                note.setIsLoading(true);
                                                 String chatId =
                                                     const Uuid().v4();
                                                 String message =
@@ -285,34 +340,47 @@ class ChatScreen extends StatelessWidget {
                                                         userProvider.photoUrl);
                                                 ChatController()
                                                     .sendMessage(
-                                                  chat,
-                                                  chatId,
-                                                  getConversationId(),
-                                                  recName,
-                                                  recPhoto,
-                                                  userProvider.token,
-                                                  recToken,
-                                                )
+                                                        chat,
+                                                        chatId,
+                                                        getConversationId(),
+                                                        recName,
+                                                        recPhoto,
+                                                        userProvider.token,
+                                                        recToken,
+                                                        context)
                                                     .then((value) {
                                                   NotificationMethods
                                                       .sendPushNotification(
                                                           recToken,
                                                           '${userProvider.username} send a voice note',
                                                           userProvider.name);
+                                                  note.setIsLoading(false);
                                                   note.removeVoiceNote();
                                                 });
                                               },
-                                              icon: const Icon(
-                                                  Icons.send_rounded),
-                                              color: blackColor,
-                                              iconSize: 30,
+                                              child: note.isLoading
+                                                  ? SizedBox(
+                                                      height: 15,
+                                                      width: 15,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        color: blackColor,
+                                                      ))
+                                                  : Icon(
+                                                      Icons.send_rounded,
+                                                      color: blackColor,
+                                                      size: 30,
+                                                    ),
+                                            ),
+                                            const SizedBox(
+                                              width: 5,
                                             ),
                                             Expanded(
-                                              child: IconButton(
-                                                  onPressed: () {
+                                              child: GestureDetector(
+                                                  onTap: () {
                                                     note.removeVoiceNote();
                                                   },
-                                                  icon: Icon(
+                                                  child: Icon(
                                                     Icons.close,
                                                     color: blackColor,
                                                     size: 30,

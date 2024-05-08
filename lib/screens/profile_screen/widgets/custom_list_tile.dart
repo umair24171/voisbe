@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'package:social_notes/resources/colors.dart';
-// import 'package:social_notes/screens/profile_screen/controller/update_profile_controller.dart';
-import 'package:social_notes/screens/profile_screen/provider.dart/update_profile_provider.dart';
-import 'package:social_notes/screens/upload_sounds/view/upload_sound.dart';
 
 class CustomListTile extends StatefulWidget {
   CustomListTile({
@@ -14,7 +11,18 @@ class CustomListTile extends StatefulWidget {
     required this.isLink,
     this.isSound = false,
     required this.username,
+    this.isVerifiedForPrice = true,
     required this.onChanged,
+    // required this.validate,
+    this.textCapitalization = TextCapitalization.none,
+    this.userNameError,
+    this.linkError,
+    this.contactError,
+    this.priceError,
+    this.isBio = false,
+    this.isUserName = false,
+    this.isPrice = false,
+    this.validator,
   }) : super(key: key);
 
   final String name;
@@ -22,8 +30,20 @@ class CustomListTile extends StatefulWidget {
   final String inputText;
   final bool isLink;
   final ValueChanged<String> onChanged;
+  bool isBio;
+  bool isPrice;
+  bool isVerifiedForPrice;
+
   bool isSound;
   final String username;
+  String? Function(String?)? validator;
+  TextCapitalization textCapitalization;
+  // bool validate;
+  String? userNameError;
+  String? linkError;
+  String? contactError;
+  String? priceError;
+  bool isUserName;
 
   @override
   _CustomListTileState createState() => _CustomListTileState();
@@ -49,12 +69,15 @@ class _CustomListTileState extends State<CustomListTile> {
 
   @override
   Widget build(BuildContext context) {
-    var updateProvider =
-        Provider.of<UpdateProfileProvider>(context, listen: false);
     var size = MediaQuery.of(context).size;
     return Padding(
-      padding:
-          EdgeInsets.symmetric(horizontal: 15, vertical: widget.isLink ? 3 : 6),
+      padding: EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: widget.isBio
+              ? 0
+              : widget.isLink
+                  ? 3
+                  : 6),
       child: Column(
         children: [
           Row(
@@ -65,12 +88,23 @@ class _CustomListTileState extends State<CustomListTile> {
               Expanded(
                 flex: 3,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: EdgeInsets.only(
+                      left: 8,
+                      top: widget.contactError != null ||
+                              widget.userNameError != null ||
+                              widget.linkError != null ||
+                              widget.priceError != null
+                          ? 14
+                          : widget.isBio
+                              ? 23
+                              : 0),
                   child: Text(
                     widget.name,
                     style: TextStyle(
+                      // height: 1,
                       fontFamily: fontFamily,
-                      color: whiteColor,
+                      color:
+                          widget.isVerifiedForPrice ? whiteColor : Colors.grey,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -81,76 +115,138 @@ class _CustomListTileState extends State<CustomListTile> {
                   ? Expanded(
                       flex: 9,
                       child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child:
-                              // _isEditing
-                              //     ?
-                              TextFormField(
-                            controller: _textEditingController,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (widget.userNameError != null)
+                              Text(
+                                widget.userNameError!,
+                                style: TextStyle(
+                                    height: 0,
+                                    color: greenColor,
+                                    fontSize: 12,
+                                    fontFamily: fontFamily),
+                              ),
+                            if (widget.isBio)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 7),
+                                child: Text(
+                                  'Max 160 characters',
+                                  style: TextStyle(
+                                      height: 0,
+                                      color: greenColor,
+                                      fontSize: 12,
+                                      fontFamily: fontFamily),
+                                ),
+                              ),
+                            Container(
+                              height: widget.isBio ? null : 20,
+                              // height: widget.isBio ? 20 : null,
+                              child: TextFormField(
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(
+                                      widget.isUserName
+                                          ? 9
+                                          : widget.isBio
+                                              ? 160
+                                              : 30),
+                                ],
+                                // maxLines: widget.isBio ? 3 : 1,
+                                maxLength: widget.isBio ? 160 : null,
+                                maxLines: widget.isBio ? 3 : 1,
+                                textCapitalization: widget.textCapitalization,
+                                autovalidateMode: null,
+                                // validator: widget.validator,
 
-                            onChanged: (value) {
-                              widget.onChanged(value);
-                            },
-                            // textAlign: TextAlign.start,
-                            textAlignVertical: TextAlignVertical.bottom,
-                            style: TextStyle(
-                                color: whiteColor,
-                                fontFamily: fontFamily,
-                                fontSize: 14),
-                            decoration: const InputDecoration(
-                              constraints: BoxConstraints(maxHeight: 20),
-                              contentPadding: EdgeInsets.only(bottom: 14),
-
-                              border: InputBorder.none,
-                              // suffixIcon: IconButton(
-                              //   icon: const Icon(Icons.check),
-                              //   color: Colors.white,
-                              //   onPressed: () {
-                              //     widget.onChanged(_textEditingController.text);
-                              //     setState(() {
-                              //       _isEditing = !_isEditing;
-                              //     });
-                              //   },
-                              // ),
+                                controller: _textEditingController,
+                                // onFieldSubmitted: (value) {
+                                //   if (!widget.isBio) {
+                                //     widget.onChanged(value);
+                                //   }
+                                // },
+                                onChanged: (value) {
+                                  widget.onChanged(value);
+                                },
+                                textAlignVertical: widget.isBio
+                                    ? TextAlignVertical.top
+                                    : TextAlignVertical.bottom,
+                                style: TextStyle(
+                                    color: whiteColor,
+                                    fontFamily: fontFamily,
+                                    fontSize: 14),
+                                decoration: InputDecoration(
+                                  counterText: "",
+                                  errorStyle: TextStyle(fontFamily: fontFamily),
+                                  constraints: BoxConstraints(
+                                      minHeight: 20,
+                                      maxHeight: widget.isBio ? 90 : 20),
+                                  contentPadding: widget.isBio
+                                      ? const EdgeInsets.only(
+                                          left: 0, right: 0, top: 0, bottom: 0)
+                                      : const EdgeInsets.only(
+                                          left: 0,
+                                          right: 0,
+                                          top: 0,
+                                          bottom: 14),
+                                  border: InputBorder.none,
+                                ),
+                              ),
                             ),
-                          )
-                          // : GestureDetector(
-                          //     onTap: () {
-                          //       setState(() {
-                          //         _isEditing = true;
-                          //       });
-                          //     },
-                          //     child: Text(
-                          //       widget.subtitile,
-                          //       overflow: TextOverflow.fade,
-                          //       style: TextStyle(
-                          //         fontSize: 14,
-                          //         fontWeight: FontWeight.w500,
-                          //         fontFamily: fontFamily,
-                          //         color: whiteColor,
-                          //       ),
-                          //     ),
-                          //   ),
-                          ),
+                          ],
+                        ),
+                      ),
                     )
                   : Expanded(
                       flex: 9,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 0),
-                        child: Stack(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Container(
-                                  decoration: BoxDecoration(
-                                    color: blackColor,
-                                    borderRadius: BorderRadius.circular(19),
-                                  ),
-                                  child:
-                                      //  _isEditing
-                                      //     ?
-                                      TextFormField(
+                            if (widget.linkError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 15),
+                                child: Text(
+                                  widget.linkError!,
+                                  style: TextStyle(
+                                      height: 0,
+                                      color: greenColor,
+                                      fontSize: 12,
+                                      fontFamily: fontFamily),
+                                ),
+                              ),
+                            if (widget.contactError != null)
+                              Text(
+                                widget.contactError!,
+                                style: TextStyle(
+                                    height: 0,
+                                    color: greenColor,
+                                    fontSize: 12,
+                                    fontFamily: fontFamily),
+                              ),
+                            if (widget.priceError != null)
+                              Text(
+                                widget.priceError!,
+                                style: TextStyle(
+                                    height: 0,
+                                    color: greenColor,
+                                    fontSize: 12,
+                                    fontFamily: fontFamily),
+                              ),
+                            Stack(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: TextFormField(
+                                    inputFormatters: [
+                                      LengthLimitingTextInputFormatter(60),
+                                    ],
+                                    autovalidateMode: null,
+                                    keyboardType: widget.isPrice
+                                        ? TextInputType.number
+                                        : TextInputType.text,
                                     focusNode: _focusNode,
                                     readOnly: _isEditing
                                         ? false
@@ -169,8 +265,22 @@ class _CustomListTileState extends State<CustomListTile> {
                                         fontSize: 14,
                                         fontFamily: fontFamily),
                                     decoration: InputDecoration(
-                                      border: InputBorder.none,
-
+                                      fillColor: widget.isVerifiedForPrice
+                                          ? blackColor
+                                          : const Color(0xff6f6f6f),
+                                      filled: true,
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(19),
+                                          borderSide: BorderSide.none),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(19),
+                                          borderSide: BorderSide.none),
+                                      focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(19),
+                                          borderSide: BorderSide.none),
                                       contentPadding: const EdgeInsets.only(
                                         bottom: 18,
                                         top: 0,
@@ -178,77 +288,64 @@ class _CustomListTileState extends State<CustomListTile> {
                                         right: 15,
                                       ),
                                       constraints: BoxConstraints(
+                                        minHeight: 34,
                                         maxHeight: 34,
+                                        // widget.validate &&
+                                        //         widget.validator != null
+                                        //     ? 54
+                                        //     : 34,
                                         maxWidth: size.width * 0.8,
                                       ),
-                                      // suffixIcon: IconButton(
-                                      //   icon: const Icon(Icons.check),
-                                      //   color: Colors.white,
-                                      //   onPressed: () {},
-                                      // ),
                                     ),
-                                  )
-                                  // : GestureDetector(
-                                  //     onTap: () {
-                                  //       setState(() {
-                                  //         _isEditing = true;
-                                  //       });
-                                  //     },
-                                  //     child: Text(
-                                  //       widget.subtitile,
-                                  //       style: TextStyle(
-                                  //           fontFamily: fontFamily,
-                                  //           color: whiteColor),
-                                  //     ),
-                                  //   ),
                                   ),
-                            ),
-                            Positioned(
-                              left: size.width * 0.52,
-                              top: 7,
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: primaryColor,
-                                  borderRadius: BorderRadius.circular(18),
                                 ),
-                                child: widget.isSound
-                                    ? GestureDetector(
-                                        onTap: () {
-                                          showBottomSheet(
-                                            context: context,
-                                            builder: (context) => UploadSound(
-                                              username: widget.username,
+                                Positioned(
+                                  left: size.width * 0.52,
+                                  top: 7,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: widget.isVerifiedForPrice
+                                          ? primaryColor
+                                          : const Color(0xffcdcdcd),
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: widget.isSound
+                                        ? GestureDetector(
+                                            onTap: () {
+                                              // showBottomSheet(
+                                              //   context: context,
+                                              //   builder: (context) => UploadSound(
+                                              //     username: widget.username,
+                                              //   ),
+                                              // );
+                                            },
+                                            child: Image.asset(
+                                              'assets/images/uploadsound.png',
+                                              height: 15,
+                                              width: 15,
                                             ),
-                                          );
-                                        },
-                                        child: Image.asset(
-                                          'assets/images/uploadsound.png',
-                                          height: 15,
-                                          width: 15,
-                                        ),
-                                      )
-                                    : InkWell(
-                                        onTap: () {
-                                          _isEditing = !_isEditing;
-                                          setState(() {});
-                                          if (_isEditing) {
-                                            FocusScope.of(context)
-                                                .requestFocus(_focusNode);
-                                          }
-                                        },
-                                        child: Icon(
-                                          // _isEditing
-                                          //     ? Icons.check
-                                          //     :
-                                          _isEditing
-                                              ? Icons.check
-                                              : Icons.edit_outlined,
-                                          color: Colors.white,
-                                          size: 15,
-                                        ),
-                                      ),
-                              ),
+                                          )
+                                        : InkWell(
+                                            onTap: () {
+                                              _isEditing = !_isEditing;
+                                              setState(() {});
+                                              if (_isEditing) {
+                                                FocusScope.of(context)
+                                                    .requestFocus(_focusNode);
+                                              }
+                                            },
+                                            child: Icon(
+                                              _isEditing
+                                                  ? Icons.check
+                                                  : Icons.edit_outlined,
+                                              color: Colors.white,
+                                              size: 15,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

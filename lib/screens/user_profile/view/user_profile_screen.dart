@@ -1,15 +1,27 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:flutter/material.dart';
+
 // import 'package:flutter/widgets.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:flutter_svg/svg.dart';
 // import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+
 import 'package:social_notes/resources/colors.dart';
+// import 'package:social_notes/resources/show_snack.dart';
+import 'package:social_notes/resources/white_overlay_popup.dart';
 // import 'package:social_notes/resources/custom_popup.dart';
 import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
+import 'package:social_notes/screens/auth_screens/view/auth_screen.dart';
+import 'package:social_notes/screens/custom_bottom_bar.dart';
 // import 'package:social_notes/screens/auth_screens/view/auth_screen.dart';
 import 'package:social_notes/screens/notifications_screen/notifications_screen.dart';
 import 'package:social_notes/screens/profile_screen/profile_screen.dart';
+import 'package:social_notes/screens/settings_screen/view/settings_screen.dart';
+import 'package:social_notes/screens/upload_sounds/view/upload_sound.dart';
 import 'package:social_notes/screens/user_profile/provider/user_profile_provider.dart';
 import 'package:social_notes/screens/user_profile/view/widgets/custom_drawer.dart';
 import 'package:social_notes/screens/user_profile/view/widgets/custom_following_container.dart';
@@ -26,7 +38,7 @@ class UserProfileScreen extends StatelessWidget {
 
     Provider.of<UserProfileProvider>(context, listen: false)
         .getUserPosts(FirebaseAuth.instance.currentUser!.uid);
-    var userProvider = Provider.of<UserProvider>(context, listen: false);
+    var userProvider = Provider.of<UserProvider>(context, listen: true);
     userProvider.getUserData();
     return userProvider.user == null
         ? SpinKitThreeBounce(
@@ -48,26 +60,152 @@ class UserProfileScreen extends StatelessWidget {
                           fontSize: 19,
                           fontWeight: FontWeight.w600),
                     ),
-                    Image.network(
-                      'https://media.istockphoto.com/id/1396933001/vector/vector-blue-verified-badge.jpg?s=612x612&w=0&k=20&c=aBJ2JAzbOfQpv2OCSr0k8kYe0XHutOGBAJuVjvWvPrQ=',
-                      height: 20,
-                      width: 20,
-                    ),
+                    if (userProvider.user!.isVerified)
+                      Image.network(
+                        'https://media.istockphoto.com/id/1396933001/vector/vector-blue-verified-badge.jpg?s=612x612&w=0&k=20&c=aBJ2JAzbOfQpv2OCSr0k8kYe0XHutOGBAJuVjvWvPrQ=',
+                        height: 20,
+                        width: 20,
+                      ),
                   ],
                 ),
                 InkWell(
-                  onTap: () {
-                    showMenu(
+                  onTap: () async {
+                    showModalBottomSheet(
+                        useSafeArea: true,
+                        enableDrag: true,
+                        isScrollControlled: true,
                         context: context,
-                        position: const RelativeRect.fromLTRB(0, 70, 0, 0),
-                        items: [
-                          PopupMenuItem(
-                            child: Text(
-                              'Add Account',
-                              style: TextStyle(fontFamily: fontFamily),
+                        builder: (context) {
+                          return Container(
+                            height: 250,
+                            decoration: const BoxDecoration(
+                                color: Color(0xff11232f),
+                                borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    topRight: Radius.circular(20))),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                children: [
+                                  // Align(
+                                  //   alignment: Alignment.centerRight,
+                                  //   child: IconButton(
+                                  //       onPressed: () {
+                                  //         Navigator.pop(context);
+                                  //       },
+                                  //       icon: Icon(
+                                  //         Icons.cancel,
+                                  //         color: whiteColor,
+                                  //       )),
+                                  // ),
+                                  Consumer<UserProfileProvider>(
+                                      builder: (context, provider, _) {
+                                    return Expanded(
+                                      child: Card(
+                                        color: blackColor.withOpacity(0.2),
+                                        child: ListView.builder(
+                                            shrinkWrap: true,
+                                            itemCount:
+                                                provider.userAccounts.length,
+                                            itemBuilder: (context, index) {
+                                              return Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8,
+                                                        horizontal: 6),
+                                                child: InkWell(
+                                                  onTap: () async {
+                                                    FirebaseAuth auth =
+                                                        FirebaseAuth.instance;
+                                                    UserCredential credential =
+                                                        await auth.signInWithEmailAndPassword(
+                                                            email: provider
+                                                                .userAccounts[
+                                                                    index]
+                                                                .email,
+                                                            password: provider
+                                                                .userAccounts[
+                                                                    index]
+                                                                .password);
+                                                    if (credential.user !=
+                                                        null) {
+                                                      Navigator.pushAndRemoveUntil(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  const BottomBar()),
+                                                          (route) => false);
+                                                    }
+                                                  },
+                                                  child: Row(
+                                                    children: [
+                                                      CircleAvatar(
+                                                        radius: 20,
+                                                        backgroundImage:
+                                                            NetworkImage(provider
+                                                                .userAccounts[
+                                                                    index]
+                                                                .profileImage),
+                                                      ),
+                                                      const SizedBox(
+                                                        width: 10,
+                                                      ),
+                                                      Text(
+                                                        provider
+                                                            .userAccounts[index]
+                                                            .name,
+                                                        style: TextStyle(
+                                                            fontFamily:
+                                                                fontFamily,
+                                                            color: whiteColor),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            }),
+                                      ),
+                                    );
+                                  }),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10),
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(context,
+                                            MaterialPageRoute(
+                                          builder: (context) {
+                                            return AuthScreen();
+                                          },
+                                        ));
+                                      },
+                                      child: Row(
+                                        children: [
+                                          const SizedBox(
+                                            width: 10,
+                                          ),
+                                          Icon(
+                                            Icons.add_circle_outline_outlined,
+                                            color: whiteColor,
+                                          ),
+                                          const SizedBox(
+                                            width: 10,
+                                          ),
+                                          Text(
+                                            'Add VOISBE account',
+                                            style: TextStyle(
+                                                color: whiteColor,
+                                                fontFamily: fontFamily),
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
-                          ),
-                        ]);
+                          );
+                        });
                   },
                   child: Icon(
                     Icons.keyboard_arrow_down_outlined,
@@ -93,7 +231,11 @@ class UserProfileScreen extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () async {
-                    _scaffoldKey.currentState!.openDrawer();
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (context) {
+                        return const SettingsScreen();
+                      },
+                    ));
                   },
                   icon: Icon(
                     Icons.menu,
@@ -111,9 +253,11 @@ class UserProfileScreen extends StatelessWidget {
                   Container(
                     height: size.height,
                     decoration: BoxDecoration(
-                        image: DecorationImage(
-                            fit: BoxFit.cover,
-                            image: NetworkImage(userProvider.user!.photoUrl))),
+                      image: DecorationImage(
+                        fit: BoxFit.cover,
+                        image: NetworkImage(userProvider.user!.photoUrl),
+                      ),
+                    ),
                   ),
                   ColorFiltered(
                     colorFilter:
@@ -124,8 +268,8 @@ class UserProfileScreen extends StatelessWidget {
                         return LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          stops: const [1.0, 0],
-                          colors: [primaryColor, primaryColor],
+                          stops: const [1.0, 1],
+                          colors: [blackColor, primaryColor],
                         ).createShader(bounds);
                       },
                       child: Container(
@@ -134,7 +278,10 @@ class UserProfileScreen extends StatelessWidget {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, primaryColor],
+                            colors: [
+                              Colors.black.withOpacity(0.2),
+                              primaryColor
+                            ],
                           ),
                         ),
                       ),
@@ -144,7 +291,8 @@ class UserProfileScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10)
+                              .copyWith(top: 25),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -171,46 +319,67 @@ class UserProfileScreen extends StatelessWidget {
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600),
                                     ),
-                                    Image.network(
-                                      'https://media.istockphoto.com/id/1396933001/vector/vector-blue-verified-badge.jpg?s=612x612&w=0&k=20&c=aBJ2JAzbOfQpv2OCSr0k8kYe0XHutOGBAJuVjvWvPrQ=',
-                                      height: 20,
-                                      width: 20,
-                                    ),
+                                    if (userProvider.user!.isVerified)
+                                      Image.network(
+                                        'https://media.istockphoto.com/id/1396933001/vector/vector-blue-verified-badge.jpg?s=612x612&w=0&k=20&c=aBJ2JAzbOfQpv2OCSr0k8kYe0XHutOGBAJuVjvWvPrQ=',
+                                        height: 20,
+                                        width: 20,
+                                      ),
                                   ],
                                 ),
                               ),
                               const SizedBox(
                                 width: 5,
                               ),
-                              // Container(
-                              //   padding: const EdgeInsets.all(6),
-                              //   decoration: BoxDecoration(
-                              //       color: whiteColor,
-                              //       borderRadius: BorderRadius.circular(30)),
-                              //   child: Icon(
-                              //     Icons.notifications_none_outlined,
-                              //     color: primaryColor,
-                              //     size: 30,
-                              //   ),
-                              // ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(context, MaterialPageRoute(
+                                    builder: (context) {
+                                      return const NotificationScreen();
+                                    },
+                                  ));
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                      color: whiteColor,
+                                      borderRadius: BorderRadius.circular(30)),
+                                  child: Icon(
+                                    Icons.notifications_none_outlined,
+                                    color: primaryColor,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
                               const SizedBox(
                                 width: 5,
                               ),
-                              // Container(
-                              //   padding: const EdgeInsets.all(6),
-                              //   decoration: BoxDecoration(
-                              //       color: whiteColor,
-                              //       borderRadius: BorderRadius.circular(30)),
-                              //   child: Icon(
-                              //     Icons.star_border_outlined,
-                              //     color: primaryColor,
-                              //     size: 30,
-                              //   ),
-                              // ),
-                              // const SizedBox(
-                              //   width: 2,
-                              // ),
+                              InkWell(
+                                onTap: () {
+                                  showWhiteOverlayPopup(
+                                      context, Icons.error, null,
+                                      title: 'Oops!',
+                                      message:
+                                          'You cannot subscribe to yourself',
+                                      isUsernameRes: false);
+                                },
+                                child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                        color: whiteColor,
+                                        borderRadius:
+                                            BorderRadius.circular(30)),
+                                    child: SvgPicture.asset(
+                                      'assets/icons/Sub inactive.svg',
+                                      height: 30,
+                                      width: 30,
+                                    )),
+                              ),
+                              const SizedBox(
+                                width: 2,
+                              ),
                               PopupMenuButton(
+                                color: whiteColor,
                                 icon: Icon(
                                   Icons.more_horiz,
                                   color: whiteColor,
@@ -218,8 +387,12 @@ class UserProfileScreen extends StatelessWidget {
                                 itemBuilder: (context) => [
                                   PopupMenuItem(
                                     onTap: () {
-                                      Navigator.pushNamed(
-                                          context, ProfileScreen.routeName);
+                                      Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  ProfileScreen(
+                                                    isMainPro: true,
+                                                  )));
                                     },
                                     child: Text(
                                       'Edit Profile',
@@ -290,35 +463,45 @@ class UserProfileScreen extends StatelessWidget {
                             const SizedBox(
                               width: 10,
                             ),
-                            // Container(
-                            //   padding: const EdgeInsets.symmetric(
-                            //       horizontal: 7, vertical: 5),
-                            //   decoration: BoxDecoration(
-                            //       color: primaryColor,
-                            //       borderRadius: BorderRadius.circular(15)),
-                            //   child: Row(
-                            //     mainAxisAlignment:
-                            //         MainAxisAlignment.spaceBetween,
-                            //     children: [
-                            //       Image.asset(
-                            //         'assets/images/sounds_button.png',
-                            //         height: 15,
-                            //         width: 15,
-                            //       ),
-                            //       Padding(
-                            //         padding: const EdgeInsets.symmetric(
-                            //             horizontal: 7),
-                            //         child: Text(
-                            //           'Sounds',
-                            //           style: TextStyle(
-                            //               color: whiteColor,
-                            //               fontFamily: fontFamily,
-                            //               fontWeight: FontWeight.w600),
-                            //         ),
-                            //       ),
-                            //     ],
-                            //   ),
-                            // )
+                            InkWell(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (context) => UploadSound(
+                                    username: userProvider.user!.name,
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 5),
+                                decoration: BoxDecoration(
+                                    color: primaryColor,
+                                    borderRadius: BorderRadius.circular(15)),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/sounds_button.png',
+                                      height: 15,
+                                      width: 15,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 7),
+                                      child: Text(
+                                        'Audio',
+                                        style: TextStyle(
+                                            color: whiteColor,
+                                            fontFamily: fontFamily,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
                           ],
                         ),
                         Padding(
@@ -352,9 +535,10 @@ class UserProfileScreen extends StatelessWidget {
                                 const SizedBox(
                                   width: 30,
                                 ),
-                                const CustomFollowing(
-                                  number: '0',
-                                  text: 'Minutes',
+                                CustomFollowing(
+                                  number:
+                                      '${userProvider.user!.following.length}',
+                                  text: 'Followings',
                                 ),
                               ],
                             ),

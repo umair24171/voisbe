@@ -2,14 +2,75 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_notes/screens/add_note_screen/model/note_model.dart';
 import 'package:social_notes/screens/auth_screens/model/user_model.dart';
+import 'package:social_notes/screens/user_profile/models/user_account.dart';
 
 class UserProfileProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<NoteModel> userPosts = [];
   List<NoteModel> otherUserPosts = [];
   UserModel? otherUser;
+
+  List<UserAccount> userAccounts = [];
+
+  List<UserModel> followers = [];
+  List<UserModel> following = [];
+
+  Future<void> getFollowers(String userId) async {
+    followers.clear();
+    final QuerySnapshot<Map<String, dynamic>> userPostsSnapshot =
+        await _firestore
+            .collection('users')
+            .where('following', arrayContains: userId)
+            .get();
+    followers = userPostsSnapshot.docs
+        .map((QueryDocumentSnapshot<Map<String, dynamic>> e) =>
+            UserModel.fromMap(e.data()))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> getFollowing(String userId) async {
+    following.clear();
+    notifyListeners();
+    final QuerySnapshot<Map<String, dynamic>> userPostsSnapshot =
+        await _firestore
+            .collection('users')
+            .where('followers', arrayContains: userId)
+            .get();
+    following = userPostsSnapshot.docs
+        .map((QueryDocumentSnapshot<Map<String, dynamic>> e) =>
+            UserModel.fromMap(e.data()))
+        .toList();
+    notifyListeners();
+  }
+
+  geUserAccounts() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    List<String>? userInfo = preferences.getStringList('userAccounts');
+    if (userInfo != null) {
+      QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+          .collection('users')
+          .where('uid', whereIn: userInfo)
+          .get();
+      List<UserModel> users =
+          snapshot.docs.map((e) => UserModel.fromMap(e.data())).toList();
+      userAccounts.clear();
+      for (var user in users) {
+        // if (user.uid != FirebaseAuth.instance.currentUser!.uid) {
+        userAccounts.add(UserAccount(
+          name: user.username,
+          password: user.password,
+          email: user.email,
+          profileImage: user.photoUrl,
+        ));
+        // }
+      }
+      notifyListeners();
+    }
+  }
 
   Future<void> getUserPosts(String userId) async {
     final QuerySnapshot<Map<String, dynamic>> userPostsSnapshot =
@@ -34,30 +95,39 @@ class UserProfileProvider with ChangeNotifier {
   followUser(
     UserModel currentUser,
     UserModel followUser,
-  ) {
+  ) async {
     if (followUser.followers.contains(currentUser.uid)) {
-      _firestore.collection('users').doc(followUser.uid).update({
+      await _firestore.collection('users').doc(followUser.uid).update({
         'followers': FieldValue.arrayRemove([currentUser.uid])
       });
+      await _firestore.collection('users').doc(currentUser.uid).update({
+        'following': FieldValue.arrayRemove([followUser.uid])
+      });
+
       // otherUser!.followers.remove(FirebaseAuth.instance.currentUser!.uid);
     } else {
-      _firestore.collection('users').doc(followUser.uid).update({
+      await _firestore.collection('users').doc(followUser.uid).update({
         'followers': FieldValue.arrayUnion([currentUser.uid])
+      });
+      await _firestore.collection('users').doc(currentUser.uid).update({
+        'following': FieldValue.arrayUnion([followUser.uid])
       });
       // otherUser!.followers.remove(currentUser.uid);
     }
-    if (currentUser.following.contains(followUser.uid)) {
-      _firestore.collection('users').doc(currentUser.uid).update({
-        'following': FieldValue.arrayRemove([followUser.uid])
-      });
-    } else {
-      _firestore.collection('users').doc(currentUser.uid).update({
-        'following': FieldValue.arrayUnion([followUser.uid])
-      });
-    }
+    // if (currentUser.following.contains(followUser.uid)) {
+    //   await _firestore.collection('users').doc(currentUser.uid).update({
+    //     'following': FieldValue.arrayRemove([followUser.uid])
+    //   });
+    // } else {
+    //   await _firestore.collection('users').doc(currentUser.uid).update({
+    //     'following': FieldValue.arrayUnion([followUser.uid])
+    //   });
+    // }
 
-    notifyListeners();
+    // notifyListeners();
   }
+
+  // followUserLocally() {}
 
   Future<void> getOtherUserPosts(String userId) async {
     final QuerySnapshot<Map<String, dynamic>> userPostsSnapshot =
@@ -88,7 +158,7 @@ class UserProfileProvider with ChangeNotifier {
     }
 
     log(pinnedPosts.length.toString());
-    if (pinnedPosts.length <= 1 || isPinned == false) {
+    if (pinnedPosts.length <= 2 || isPinned == false) {
       await _firestore
           .collection('notes')
           .doc(noteId)

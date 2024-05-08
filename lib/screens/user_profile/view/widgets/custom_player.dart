@@ -1,88 +1,200 @@
 // import 'dart:developer';
 
-import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
+import 'dart:developer';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:provider/provider.dart';
 // import 'package:flutter/widgets.dart';
 import 'package:simple_waveform_progressbar/simple_waveform_progressbar.dart';
 import 'package:social_notes/resources/colors.dart';
 
+import 'package:social_notes/screens/home_screen/provider/filter_provider.dart';
+
 class CustomProgressPlayer extends StatefulWidget {
-  const CustomProgressPlayer({
-    Key? key,
-    required this.noteUrl,
-    required this.height,
-    required this.width,
-    required this.mainWidth,
-    required this.mainHeight,
-    this.backgroundColor = Colors.white,
-  }) : super(key: key);
+  CustomProgressPlayer(
+      {Key? key,
+      required this.noteUrl,
+      required this.height,
+      required this.width,
+      required this.mainWidth,
+      required this.mainHeight,
+      this.backgroundColor = Colors.white,
+      this.size = 35,
+      this.isComment = false,
+      this.isMainPlayer = false,
+      this.commentId,
+      this.postId,
+      this.stopOtherPlayer,
+      this.playedCounter,
+      this.currentIndex,
+      this.waveColor})
+      : super(key: key);
+
   final String noteUrl;
   final double height;
   final double width;
   final double mainWidth;
   final double mainHeight;
   final Color backgroundColor;
+  double size;
+  int? playedCounter;
+  Color? waveColor;
+  bool isComment;
+  String? commentId;
+  String? postId;
+  bool isMainPlayer;
+  final Function(AudioPlayer)? stopOtherPlayer;
+  int? currentIndex;
   @override
   State<CustomProgressPlayer> createState() => _CustomProgressPlayerState();
 }
 
 class _CustomProgressPlayerState extends State<CustomProgressPlayer> {
-  late AudioPlayer _audioPlayer;
-  bool _isPlaying = false;
-  PlayerState? _playerState;
-
-  @override
-  void initState() {
-    super.initState();
-    _audioPlayer = AudioPlayer();
-    _audioPlayer.setReleaseMode(ReleaseMode.stop);
-    _audioPlayer.setSourceUrl(widget.noteUrl);
-    _playerState = _audioPlayer.state;
-
-    _audioPlayer.onDurationChanged.listen((event) {
-      setState(() {
-        duration = event;
-      });
-    });
-    _audioPlayer.onPositionChanged.listen((event) {
-      setState(() {
-        position = event;
-      });
-    });
-
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (state == PlayerState.completed) {
-        setState(() {
-          _isPlaying = false;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
-  }
-
-  void playPause() async {
-    if (_isPlaying) {
-      _audioPlayer.pause();
-    } else {
-      _audioPlayer.resume();
-    }
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
-  }
-
+  var _player = AudioPlayer();
+  bool isPlaying = false;
+  bool isBuffering = false;
+  double _playbackSpeed = 1.0;
   Duration duration = Duration.zero;
   Duration position = Duration.zero;
 
   @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    //  _audioPlayer.setReleaseMode(ReleaseMode.stop);
+
+    _init();
+    _player.playerStateStream.listen((event) {
+      if (event.processingState == ProcessingState.completed) {
+        setState(() {
+          isPlaying = false;
+        });
+      }
+    });
+    _player.playingStream.listen((event) {
+      if (event == true) {
+        setState(() {
+          isPlaying = true;
+        });
+      } else {
+        setState(() {
+          isPlaying = false;
+        });
+      }
+    });
+    if (widget.isMainPlayer && widget.stopOtherPlayer != null) {
+      widget.stopOtherPlayer!(_player);
+    }
+  }
+
+  Future<void> _init() async {
+    _player.playbackEventStream.listen((event) {},
+        onError: (Object e, StackTrace stackTrace) {
+      print('A stream error occurred: $e');
+    });
+    // Try to load audio from a source and catch any errors.
+    try {
+      // AAC example: https://dl.espressif.com/dl/audio/ff-16b-2c-44100hz.aac
+      await _player
+          .setAudioSource(AudioSource.uri(Uri.parse(widget.noteUrl)))
+          .then((value) {
+        setState(() {
+          duration = value!;
+        });
+      }); // Load a remote audio file and play.
+      _player.durationStream.listen((value) {
+        setState(() {
+          duration = value!;
+        });
+      });
+      _player.positionStream.listen((event) {
+        setState(() {
+          position = event;
+        });
+      });
+      _player.processingStateStream.listen((event) {
+        if (event == ProcessingState.loading) {
+          setState(() {
+            isBuffering = true;
+          });
+        } else {
+          setState(() {
+            isBuffering = false;
+          });
+        }
+      });
+    } on PlayerException catch (e) {
+      print("Error loading audio source: $e");
+    }
+  }
+
+  playAudio() async {
+    try {
+      setState(() {
+        isPlaying = true;
+      });
+      log("playing");
+      final audioSource = LockCachingAudioSource(Uri.parse(widget.noteUrl));
+      var da = await _player.setAudioSource(audioSource);
+
+      await _player.play();
+      _updatePlayedComment();
+    } catch (e) {
+      log(e.toString());
+    }
+  }
+
+  stopAudio() async {
+    setState(() {
+      isPlaying = false;
+    });
+    await _player.stop();
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    duration = Duration.zero;
+    position = Duration.zero;
+
+    super.dispose();
+  }
+
+  String getReverseDuration(Duration position, Duration totalDuration) {
+    int remainingSeconds = totalDuration.inSeconds - position.inSeconds;
+    int minutes = remainingSeconds ~/ 60;
+    int seconds = remainingSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  String getInitialDurationnText(Duration totalDuration) {
+    int remainingSeconds = totalDuration.inSeconds;
+    int minutes = remainingSeconds ~/ 60;
+    int seconds = remainingSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  void _updatePlayedComment() {
+    if (widget.isComment) {
+      int updateCommentCounter = widget.playedCounter ?? 0;
+      updateCommentCounter++;
+      FirebaseFirestore.instance
+          .collection('notes')
+          .doc(widget.postId)
+          .collection('comments')
+          .doc(widget.commentId)
+          .update({'playedComment': updateCommentCounter});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // log('Waveform: $doubleWaveformData');
+    // checkAutoPlay();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5),
       child: Center(
@@ -95,61 +207,195 @@ class _CustomProgressPlayerState extends State<CustomProgressPlayer> {
           ),
           child: Row(
             children: [
-              IconButton(
-                onPressed: playPause,
-                icon: Icon(
-                  _isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_fill,
-                  color: Colors.red,
-                  size: 35,
+              if (widget.isMainPlayer)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: InkWell(
+                    splashColor: Colors.transparent,
+                    onTap: isPlaying ? stopAudio : playAudio,
+                    child: Consumer<FilterProvider>(
+                        builder: (context, filterPro, _) {
+                      return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: filterPro.selectedFilter
+                                    .contains('Close Friends')
+                                ? greenColor
+                                : widget.waveColor ?? primaryColor,
+                            // border: Border.all(
+                            //   color: widget.waveColor ?? primaryColor,
+                            //   width: 2,
+                            // ),
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          // onPressed: playPause,
+                          child: isPlaying
+                              ? Icon(
+                                  Icons.pause_outlined,
+                                  color: whiteColor,
+                                  size: 20,
+                                )
+                              // : _playerState == PlayerState.paused
+                              //     ?
+                              //  Icon(
+                              //     Icons.pause_outlined,
+                              //     color: whiteColor,
+                              //     size: 20,
+                              //   )
+                              : Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.play_arrow,
+                                      color: whiteColor,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ));
+                    }),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: InkWell(
+                    splashColor: Colors.transparent,
+                    onTap: isPlaying ? stopAudio : playAudio,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: whiteColor,
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      // onPressed: playPause,
+                      child: isPlaying
+                          ? Icon(
+                              Icons.pause,
+                              color: widget.backgroundColor,
+                              size: widget.size,
+                            )
+                          : Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow,
+                                  color: widget.backgroundColor,
+                                  size: widget.size,
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
                 ),
-              ),
               SizedBox(
-                height: widget.height,
-                width: widget.width,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0.0, end: 1.0),
-                  duration: duration,
-                  builder: (context, progress, child) {
-                    final color = duration.inSeconds > 0
-                        ? Color.lerp(primaryColor, Colors.black,
-                            position.inSeconds / duration.inSeconds)!
-                        : primaryColor;
+                  height: widget.height,
+                  width: widget.width,
+                  child: Consumer<FilterProvider>(
+                      builder: (context, filterPro, _) {
                     return WaveformProgressbar(
-                      color: primaryColor,
-                      progressColor: color,
-                      progress: duration.inSeconds / position.inSeconds,
+                      color: filterPro.selectedFilter.contains('Close Friends')
+                          ? whiteColor.withOpacity(0.5)
+                          : widget.isMainPlayer
+                              ? primaryColor.withOpacity(0.5)
+                              : widget.waveColor!.withOpacity(0.5),
+                      // widget.waveColor == null
+                      //     ? primaryColor
+                      //     : widget.waveColor!,
+                      progressColor:
+                          filterPro.selectedFilter.contains('Close Friends')
+                              ? whiteColor
+                              : widget.isMainPlayer
+                                  ? primaryColor
+                                  : widget.waveColor ?? primaryColor,
+                      // widget.waveColor == null
+                      //     ? greenColor
+                      //     : widget.waveColor!,
+                      progress: position.inSeconds / duration.inSeconds,
                       onTap: (progress) {
-                        var tt = progress;
+                        Duration seekPosition = Duration(
+                            seconds: (progress * duration.inSeconds).round());
+                        // Duration seekPosition =
+                        //     Duration(seconds: progress.toInt());
+                        _player.seek(seekPosition);
                       },
                     );
-                  },
-                ),
-              ),
+                  })),
               const SizedBox(
                 width: 10,
               ),
-              Text(
-                '${position.inSeconds}:${duration.inSeconds}',
-                style: TextStyle(
-                  fontFamily: fontFamily,
-                  fontSize: 14,
-                  color: primaryColor,
-                ),
-              )
+              Consumer<FilterProvider>(builder: (context, filterPro, _) {
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    position.inSeconds == 0
+                        ? Text(
+                            getInitialDurationnText(duration),
+                            style: TextStyle(
+                              fontFamily: fontFamily,
+                              fontSize: 12,
+                              color: filterPro.selectedFilter
+                                      .contains('Close Friends')
+                                  ? greenColor
+                                  : widget.waveColor ?? primaryColor,
+                            ),
+                          )
+                        : Text(
+                            getReverseDuration(position, duration),
+                            style: TextStyle(
+                              fontFamily: fontFamily,
+                              fontSize: 12,
+                              color: filterPro.selectedFilter
+                                      .contains('Close Friends')
+                                  ? greenColor
+                                  : widget.waveColor ?? primaryColor,
+                            ),
+                          ),
+                    if (widget.waveColor == null)
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (_playbackSpeed == 1.0) {
+                              _playbackSpeed = 1.5;
+                            } else if (_playbackSpeed == 1.5) {
+                              _playbackSpeed = 2.0;
+                            } else {
+                              _playbackSpeed = 1.0;
+                            }
+                            // Set playback speed if audio is already playing
+                            if (isPlaying) {
+                              _player.setSpeed(_playbackSpeed);
+                            }
+                          });
+                        },
+                        child: Consumer<FilterProvider>(
+                            builder: (context, filterPro, _) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 4),
+                            decoration: BoxDecoration(
+                                color: filterPro.selectedFilter
+                                        .contains('Close Friends')
+                                    ? greenColor
+                                    : primaryColor,
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Text(
+                              '${_playbackSpeed}X',
+                              style: TextStyle(
+                                color: whiteColor,
+                                fontFamily: fontFamily,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                  ],
+                );
+              })
             ],
           ),
         ),
       ),
     );
-  }
-
-  Color _getColorForProgress(double progress) {
-    if (progress == 1.0) {
-      return Colors.black;
-    } else {
-      return primaryColor;
-    }
   }
 }

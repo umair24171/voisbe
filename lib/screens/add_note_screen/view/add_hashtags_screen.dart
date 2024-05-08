@@ -4,6 +4,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/resources/navigation.dart';
+import 'package:social_notes/resources/white_overlay_popup.dart';
 import 'package:social_notes/screens/add_note_screen/controllers/add_note_controller.dart';
 import 'package:social_notes/screens/add_note_screen/model/note_model.dart';
 import 'package:social_notes/screens/add_note_screen/provider/note_provider.dart';
@@ -18,12 +19,13 @@ class AddHashtagsScreen extends StatefulWidget {
       {super.key,
       required this.title,
       required this.taggedPeople,
+      required this.topicColor,
       required this.selectedTopic});
 
   final String title;
   final List<String> taggedPeople;
   final String selectedTopic;
-
+  final Color topicColor;
   static const routeName = '/add-hastags';
   @override
   State<AddHashtagsScreen> createState() => _AddHashtagsScreenState();
@@ -194,7 +196,16 @@ class _AddHashtagsScreenState extends State<AddHashtagsScreen> {
                                     onSelected: (bool selected) {
                                       setState(() {
                                         if (selected) {
-                                          _selectedOptions.add(e);
+                                          if (_selectedOptions.length < 10) {
+                                            _selectedOptions.add(e);
+                                          } else {
+                                            showWhiteOverlayPopup(context,
+                                                Icons.error_outline, null,
+                                                title: 'Error',
+                                                message:
+                                                    'You can only select 10 hashtags',
+                                                isUsernameRes: false);
+                                          }
                                         } else {
                                           _selectedOptions.remove(e);
                                         }
@@ -246,7 +257,16 @@ class _AddHashtagsScreenState extends State<AddHashtagsScreen> {
                                     onSelected: (bool selected) {
                                       setState(() {
                                         if (selected) {
-                                          _selectedOptions.add(e);
+                                          if (_selectedOptions.length < 10) {
+                                            _selectedOptions.add(e);
+                                          } else {
+                                            showWhiteOverlayPopup(context,
+                                                Icons.error_outline, null,
+                                                title: 'Error',
+                                                message:
+                                                    'You can only select 10 hashtags',
+                                                isUsernameRes: false);
+                                          }
                                         } else {
                                           _selectedOptions.remove(e);
                                         }
@@ -298,7 +318,16 @@ class _AddHashtagsScreenState extends State<AddHashtagsScreen> {
                                     onSelected: (bool selected) {
                                       setState(() {
                                         if (selected) {
-                                          _selectedOptions.add(e);
+                                          if (_selectedOptions.length < 10) {
+                                            _selectedOptions.add(e);
+                                          } else {
+                                            showWhiteOverlayPopup(context,
+                                                Icons.error_outline, null,
+                                                title: 'Error',
+                                                message:
+                                                    'You can only select 10 hashtags',
+                                                isUsernameRes: false);
+                                          }
                                         } else {
                                           _selectedOptions.remove(e);
                                         }
@@ -359,10 +388,11 @@ class _AddHashtagsScreenState extends State<AddHashtagsScreen> {
                                       context)
                                   : soundPro.voiceUrl!;
                               NoteModel note = NoteModel(
+                                  topicColor: widget.topicColor,
                                   userToken: userProvider!.token,
                                   isPinned: false,
                                   noteId: noteId,
-                                  username: userProvider.username,
+                                  username: userProvider.name,
                                   photoUrl: userProvider.photoUrl,
                                   title: widget.title,
                                   userUid: userProvider.uid,

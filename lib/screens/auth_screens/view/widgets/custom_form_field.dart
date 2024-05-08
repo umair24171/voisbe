@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:social_notes/resources/colors.dart';
 
 class CustomFormField extends StatelessWidget {
-  const CustomFormField(
+  CustomFormField(
       {super.key,
       required this.label,
       required this.controller,
+      this.isEmail = false,
+      this.validator,
       required this.isPassword});
 
   final String label;
   final TextEditingController controller;
   final bool isPassword;
+  final bool isEmail;
+  String? Function(String?)? validator;
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +22,34 @@ class CustomFormField extends StatelessWidget {
       padding: EdgeInsets.symmetric(
           horizontal: MediaQuery.of(context).size.width * 0.08, vertical: 7),
       child: isPassword
-          ? PassFormField(controller: controller, label: label)
-          : TextFormField(
+          ? PassFormField(
               controller: controller,
-              autovalidateMode: AutovalidateMode.always,
+              label: label,
+              validator: validator,
+            )
+          : TextFormField(
+              // cursorErrorColor: ,
+              cursorErrorColor: Colors.red,
+              cursorColor: primaryColor,
+              cursorHeight: 25,
+              controller: controller,
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return '$label is required';
+                } else if (isEmail && !value.contains('@')) {
+                  return 'Invalid email';
+                }
+
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               decoration: InputDecoration(
-                constraints: const BoxConstraints(maxHeight: 60),
+                // error: Text('data'),
+                errorMaxLines: 1,
+                // focusedErrorBorder: InputBorder.none,
+                errorStyle: TextStyle(
+                    color: whiteColor, fontSize: 12, fontFamily: fontFamily),
+                constraints: const BoxConstraints(maxHeight: 70, minHeight: 30),
                 contentPadding: const EdgeInsets.only(
                   left: 20,
                   // bottom: 10,
@@ -52,14 +78,16 @@ class CustomFormField extends StatelessWidget {
 }
 
 class PassFormField extends StatefulWidget {
-  const PassFormField({
+  PassFormField({
     super.key,
     required this.controller,
     required this.label,
+    this.validator,
   });
 
   final TextEditingController controller;
   final String label;
+  String? Function(String?)? validator;
 
   @override
   State<PassFormField> createState() => _PassFormFieldState();
@@ -73,42 +101,32 @@ class _PassFormFieldState extends State<PassFormField> {
     return TextFormField(
       obscureText: _obscureText,
       controller: widget.controller,
-      autovalidateMode: AutovalidateMode.always,
+      cursorColor: primaryColor,
+      cursorErrorColor: Colors.red,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      cursorHeight: 25,
+      validator: widget.validator,
       decoration: InputDecoration(
-        // alignLabelWithHint: true,
-        constraints: const BoxConstraints(maxHeight: 70),
-        suffix: InkWell(
-          onTap: () {
+        errorStyle:
+            TextStyle(color: whiteColor, fontSize: 12, fontFamily: fontFamily),
+        constraints: const BoxConstraints(maxHeight: 70, minHeight: 30),
+
+        suffixIcon: IconButton(
+          onPressed: () {
             setState(() {
               _obscureText = !_obscureText;
             });
           },
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 15).copyWith(top: 0),
-            child: Icon(
-              _obscureText ? Icons.visibility : Icons.visibility_off,
-              color: primaryColor,
-              size: 20,
-            ),
+          icon: Icon(
+            _obscureText ? Icons.visibility : Icons.visibility_off,
+            color: primaryColor,
+            size: 20,
           ),
         ),
 
-        //  IconButton(
-        //     onPressed: () {
+        contentPadding: const EdgeInsets.only(left: 20),
 
-        //     },
-        //     icon: Icon(
-        //       _obscureText ? Icons.visibility : Icons.visibility_off,
-        //       color: blackColor,
-        //     )),
-        contentPadding: const EdgeInsets.only(
-          left: 20,
-          // bottom: 20
-          // bottom: 10,
-        ),
         fillColor: whiteColor,
-        //  alignLabelWithHint: true,
         filled: true,
         border: OutlineInputBorder(
             borderSide: BorderSide.none,
@@ -116,11 +134,7 @@ class _PassFormFieldState extends State<PassFormField> {
         hintText: widget.label,
         hintStyle: TextStyle(
             fontFamily: fontFamily, color: primaryColor, fontSize: 14),
-        // label: Text(
-        //   widget.label,
-        //   style: TextStyle(
-        //       fontFamily: fontFamily, color: primaryColor, fontSize: 14),
-        // ),
+        //
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,6 +13,41 @@ class UserProvider with ChangeNotifier {
   File? imageFile;
   bool isSubscription = false;
   UserModel? user;
+  bool isNotificationEnabled = false;
+  updateUserField(bool value) {
+    user!.toMap()['isPrivate'] = value;
+    notifyListeners();
+  }
+
+  updateUserFieldForCloseFriends(String value) {
+    user!.toMap()['closeFriends'].add(value);
+    notifyListeners();
+  }
+
+  removeUSerFieldForCloseFriends(String value) {
+    user!.toMap()['closeFriends'].remove(value);
+    notifyListeners();
+  }
+
+  unblockField(String value) {
+    user!.toMap()['blockedUsers'].remove(value);
+    notifyListeners();
+  }
+
+  setUserNull() {
+    user = null;
+    notifyListeners();
+  }
+
+  setIsNotificationEnabled() {
+    isNotificationEnabled = !isNotificationEnabled;
+    notifyListeners();
+  }
+
+  removeImage() {
+    imageFile = null;
+    notifyListeners();
+  }
 
   setUserLoading(bool value) {
     userLoading = value;

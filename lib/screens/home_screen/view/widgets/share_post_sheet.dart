@@ -1,8 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
 // import 'package:social_notes/screens/add_note_screen.dart/controllers/add_note_controller.dart';
 import 'package:social_notes/screens/add_note_screen/model/note_model.dart';
+import 'package:social_notes/screens/auth_screens/model/user_model.dart';
 import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
 import 'package:social_notes/screens/chat_screen.dart/controller/chat_controller.dart';
 import 'package:social_notes/screens/chat_screen.dart/model/chat_model.dart';
@@ -16,7 +20,7 @@ class SharePostSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var allUsers = Provider.of<ChatProvider>(context).users;
+    // var allUsers = Provider.of<ChatProvider>(context).users;
     var userProvider = Provider.of<UserProvider>(context, listen: false).user;
     String getConversationId(String receiverId) {
       return userProvider!.uid.hashCode <= receiverId.hashCode
@@ -48,56 +52,74 @@ class SharePostSheet extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4),
-              itemCount: allUsers.length,
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    String chatId = const Uuid().v4();
+            child: StreamBuilder(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .where('uid', whereIn: userProvider!.followers)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4),
+                      itemCount: snapshot.data!.docs.length,
+                      itemBuilder: (context, index) {
+                        UserModel allUsers = UserModel.fromMap(
+                            snapshot.data!.docs[index].data());
+                        return GestureDetector(
+                          onTap: () {
+                            String chatId = const Uuid().v4();
 
-                    ChatModel chat = ChatModel(
-                        name: userProvider!.name,
-                        message: note.noteUrl,
-                        senderId: userProvider.uid,
-                        isShare: true,
-                        postOwner: note.username,
-                        chatId: chatId,
-                        time: DateTime.now(),
-                        receiverId: allUsers[index].uid,
-                        messageRead: '',
-                        avatarUrl: userProvider.photoUrl);
-                    ChatController().sendMessage(
-                        chat,
-                        chatId,
-                        getConversationId(allUsers[index].uid),
-                        allUsers[index].username,
-                        allUsers[index].photoUrl,
-                        userProvider.token,
-                        allUsers[index].token);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatScreen(
-                          receiverUser: allUsers[index],
-                        ),
-                      ),
+                            ChatModel chat = ChatModel(
+                                name: userProvider.name,
+                                message: note.noteUrl,
+                                senderId: userProvider.uid,
+                                isShare: true,
+                                postOwner: note.username,
+                                chatId: chatId,
+                                time: DateTime.now(),
+                                receiverId: allUsers.uid,
+                                messageRead: '',
+                                avatarUrl: userProvider.photoUrl);
+                            ChatController().sendMessage(
+                                chat,
+                                chatId,
+                                getConversationId(allUsers.uid),
+                                allUsers.username,
+                                allUsers.photoUrl,
+                                userProvider.token,
+                                allUsers.token,
+                                context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                  receiverUser: allUsers,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Column(children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage: NetworkImage(allUsers.photoUrl),
+                            ),
+                            Text(
+                              allUsers.username,
+                              style: TextStyle(fontFamily: fontFamily),
+                            )
+                          ]),
+                        );
+                      },
                     );
-                  },
-                  child: Column(children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage: NetworkImage(allUsers[index].photoUrl),
-                    ),
-                    Text(
-                      allUsers[index].username,
-                      style: TextStyle(fontFamily: fontFamily),
-                    )
-                  ]),
-                );
-              },
-            ),
+                  } else {
+                    return SpinKitThreeBounce(
+                      color: primaryColor,
+                      size: 13,
+                    );
+                  }
+                }),
           )
         ],
       ),

@@ -10,8 +10,9 @@ import 'package:social_notes/screens/search_screen/view/widgets/single_search_it
 class SearchScreen extends StatelessWidget {
   SearchScreen({super.key});
 
-  List<NoteModel> mostEngagedPosts = [];
-  List<NoteModel> postContainsSubscribers = [];
+  // List<NoteModel> mostEngagedPosts = [];
+  // List<NoteModel> postContainsSubscribers = [];
+  List<NoteModel> postsAfterFilter = [];
 
   @override
   Widget build(BuildContext context) {
@@ -20,20 +21,16 @@ class SearchScreen extends StatelessWidget {
     var userProvider = Provider.of<UserProvider>(context, listen: false).user;
     provider.getAllNotes();
     var allPosts = provider.notes;
-    mostEngagedPosts.clear();
-    postContainsSubscribers.clear();
+    postsAfterFilter.clear();
+    // postContainsSubscribers.clear();
     for (int i = 0; i < provider.notes.length; i++) {
-      if (allPosts[i].likes.length > 1) {
-        mostEngagedPosts.add(allPosts[i]);
-        allPosts.removeAt(i);
-      }
-      if (userProvider!.subscribedSoundPacks.contains(allPosts[i].userUid)) {
-        postContainsSubscribers.add(allPosts[i]);
-        allPosts.removeAt(i);
+      if (allPosts[i].likes.length >= 20) {
+        postsAfterFilter.add(allPosts[i]);
+        // allPosts.removeAt(i);
       }
     }
 
-    allPosts = [...mostEngagedPosts, ...postContainsSubscribers, ...allPosts];
+    // allPosts = [...mostEngagedPosts, ...postContainsSubscribers, ...allPosts];
     // allPosts.sort((a, b) => b.likes.length.compareTo(a.likes.length));
 
     // var postsProvider =
@@ -56,12 +53,12 @@ class SearchScreen extends StatelessWidget {
                         pro.setSearching(true);
                         pro.searchedNotes.clear();
                         pro.setSearching(true);
-                        for (int i = 0; i < allPosts.length; i++) {
-                          if (allPosts[i]
+                        for (int i = 0; i < postsAfterFilter.length; i++) {
+                          if (postsAfterFilter[i]
                                   .topic
                                   .toLowerCase()
                                   .contains(value.toLowerCase()) ||
-                              allPosts[i]
+                              postsAfterFilter[i]
                                   .username
                                   .toLowerCase()
                                   .contains(value.toLowerCase())) {
@@ -90,7 +87,7 @@ class SearchScreen extends StatelessWidget {
                         size: 20,
                       ),
                       alignLabelWithHint: true,
-                      contentPadding: EdgeInsets.only(bottom: 18),
+                      contentPadding: const EdgeInsets.only(bottom: 18),
                       hintText: 'Search',
                       hintStyle:
                           TextStyle(fontFamily: fontFamily, color: Colors.grey),
@@ -119,7 +116,7 @@ class SearchScreen extends StatelessWidget {
           return GridView.builder(
             itemCount: searchPro.isSearching
                 ? searchPro.searchedNotes.length
-                : allPosts.length,
+                : postsAfterFilter.length,
             shrinkWrap: true,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
@@ -129,7 +126,7 @@ class SearchScreen extends StatelessWidget {
               index: index,
               noteModel: searchPro.isSearching
                   ? searchPro.searchedNotes[index]
-                  : allPosts[index],
+                  : postsAfterFilter[index],
             ),
           );
         }));

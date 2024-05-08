@@ -1,4 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:ui';
+
 import 'package:social_notes/screens/auth_screens/model/user_model.dart';
 
 class NoteModel {
@@ -15,6 +17,7 @@ class NoteModel {
   List likes;
   List comments;
   String topic;
+  Color topicColor;
   List<String> hashtags;
   NoteModel({
     required this.noteId,
@@ -30,6 +33,7 @@ class NoteModel {
     required this.comments,
     required this.topic,
     required this.isPinned,
+    required this.topicColor,
     required this.hashtags,
   });
 
@@ -46,6 +50,7 @@ class NoteModel {
       'userToken': userToken,
       'comments': comments,
       'isPinned': isPinned,
+      'topicColor': topicColor.value,
       'likes': likes,
       'topic': topic,
       'hashtags': hashtags,
@@ -58,6 +63,9 @@ class NoteModel {
       username: map['username'] as String,
       photoUrl: map['photoUrl'] as String,
       title: map['title'] as String,
+      topicColor: map['topicColor'] as int == 0
+          ? Color(0xffFFD700)
+          : Color(map['topicColor'] as int),
       userUid: map['userUid'] as String,
       tagPeople: List.from(map['tagPeople'] as List)
           .map((userMap) => UserModel.fromMap(userMap))

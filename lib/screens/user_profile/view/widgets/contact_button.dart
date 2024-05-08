@@ -36,8 +36,8 @@ class OtherContactButtons extends StatelessWidget {
               scheme: 'mailto',
               path: otherUser.email,
               queryParameters: {
-                'subject': 'Interested in your profile',
-                'body': 'Hello, I am interested in your profile',
+                'subject': '',
+                'body': '',
               },
             );
             if (await launchUrl(emailLaunchUri)) {

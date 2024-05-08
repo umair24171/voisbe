@@ -1,7 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   String uid;
   String name;
   String username;
+  String password;
   String email;
   String photoUrl;
   List following;
@@ -9,20 +12,33 @@ class UserModel {
   String bio;
   String link;
   String contact;
+  List blockedUsers;
+  List blockedByUsers;
+  List closeFriends;
   bool isSubscriptionEnable;
   double price;
   List soundPacks;
   String token;
   List subscribedUsers = [];
   List subscribedSoundPacks = [];
+  bool isVerified;
+  bool isPrivate;
+  DateTime dateOfBirth;
+
   String pushToken;
   UserModel(
       {required this.uid,
       required this.username,
       required this.email,
       required this.photoUrl,
+      required this.password,
+      required this.closeFriends,
       required this.following,
       required this.pushToken,
+      required this.blockedUsers,
+      required this.blockedByUsers,
+      required this.isVerified,
+      required this.dateOfBirth,
       required this.token,
       required this.bio,
       required this.subscribedUsers,
@@ -31,6 +47,7 @@ class UserModel {
       required this.subscribedSoundPacks,
       required this.isSubscriptionEnable,
       required this.link,
+      required this.isPrivate,
       required this.price,
       required this.soundPacks,
       required this.followers});
@@ -43,7 +60,14 @@ class UserModel {
       'pushToken': pushToken,
       'photoUrl': photoUrl,
       'following': following,
+      'password': password,
+      'closeFriends': closeFriends,
+      'isPrivate': isPrivate,
       'token': token,
+      'blockedUsers': blockedUsers,
+      'dateOfBirth': dateOfBirth,
+      'blockedByUsers': blockedByUsers,
+      'isVerified': isVerified,
       'name': name,
       'followers': followers,
       'subscribedUsers': subscribedUsers, // Add this line
@@ -63,14 +87,21 @@ class UserModel {
         username: map['username'] as String,
         email: map['email'] as String,
         pushToken: map['pushToken'] as String,
+        isVerified: map['isVerified'] as bool,
         photoUrl: map['photoUrl'] as String,
+        isPrivate: map['isPrivate'] as bool,
+        dateOfBirth: (map['dateOfBirth'] as Timestamp).toDate(),
         token: map['token'] as String,
+        password: map['password'] as String,
         following: List.from((map['following'] as List)),
         subscribedUsers: List.from((map['subscribedUsers'] as List)),
         subscribedSoundPacks: List.from((map['subscribedSoundPacks'] as List)),
         bio: map['bio'] as String,
         contact: map['contact'] as String,
         isSubscriptionEnable: map['isSubscriptionEnable'] as bool,
+        blockedUsers: List.from((map['blockedUsers'] as List)),
+        blockedByUsers: List.from((map['blockedByUsers'] as List)),
+        closeFriends: List.from((map['closeFriends'] as List)),
         name: map['name'] as String,
         link: map['link'] as String,
         price: map['price'] as double,

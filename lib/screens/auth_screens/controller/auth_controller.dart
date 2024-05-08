@@ -8,15 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/show_snack.dart';
+import 'package:social_notes/resources/white_overlay_popup.dart';
 import 'package:social_notes/screens/auth_screens/controller/notifications_methods.dart';
 import 'package:social_notes/screens/auth_screens/model/user_model.dart';
 import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
 import 'package:social_notes/screens/custom_bottom_bar.dart';
 import 'package:social_notes/screens/profile_screen/profile_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   userSignup({
     required String email,
     required String password,
@@ -24,6 +27,8 @@ class AuthController {
     required BuildContext context,
   }) async {
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
       var userPro = Provider.of<UserProvider>(context, listen: false);
       userPro.setUserLoading(true);
       UserCredential credential = await _auth.createUserWithEmailAndPassword(
@@ -33,11 +38,18 @@ class AuthController {
         String token = await notificationMethods.getFirebaseMessagingToken();
 
         UserModel userModel = UserModel(
+            dateOfBirth: DateTime.now(),
+            isVerified: false,
+            blockedByUsers: [],
+            closeFriends: [],
+            blockedUsers: [],
             token: token,
             name: '',
             uid: credential.user!.uid,
+            isPrivate: false,
             subscribedSoundPacks: [],
             username: username,
+            password: password,
             email: email,
             photoUrl: '',
             following: [],
@@ -54,14 +66,35 @@ class AuthController {
             .collection('users')
             .doc(credential.user!.uid)
             .set(userModel.toMap());
+        // prefs.getString('userAccounts');
+        if (prefs.getStringList('userAccounts') != null) {
+          List<String>? allUsers = prefs.getStringList('userAccounts');
+          allUsers == null
+              ? prefs.setStringList('userAccounts', [credential.user!.uid])
+              : prefs.setStringList(
+                  'userAccounts', [credential.user!.uid, ...allUsers]);
+        } else {
+          prefs.setStringList('userAccounts', [credential.user!.uid]);
+        }
+
+        // prefs.setStringList('userAccounts', [credential.user!.uid]);
+        Provider.of<UserProvider>(context, listen: false).setUserNull();
+
         userPro.setUserLoading(false);
-        showSnackBar(context, 'Registeration Successful');
+        showWhiteOverlayPopup(context, Icons.check_circle, null,
+            title: 'Registeration Successful',
+            message: 'You have successfully registered',
+            isUsernameRes: false);
+        // showSnackBar(context, 'Registeration Successful');
+        log('User Registered Successfully');
         Navigator.pushReplacementNamed(context, ProfileScreen.routeName);
         // navPush(ProfileScreen.routeName, context);
       }
     } catch (e) {
       Provider.of<UserProvider>(context, listen: false).setUserLoading(false);
-      showSnackBar(context, e.toString());
+      showWhiteOverlayPopup(context, Icons.error, null,
+          title: 'Error Accured', message: e.toString(), isUsernameRes: false);
+      // showSnackBar(context, e.toString());
       log(e.toString());
     }
   }
@@ -72,25 +105,54 @@ class AuthController {
     required BuildContext context,
   }) async {
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
       var userPro = Provider.of<UserProvider>(context, listen: false);
       userPro.setUserLoading(true);
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       if (credential.user != null) {
+        prefs.getStringList('userAccounts');
+        if (prefs.getStringList('userAccounts') != null) {
+          List<String>? allUsers = prefs.getStringList('userAccounts');
+          allUsers == null
+              ? prefs.setStringList('userAccounts', [credential.user!.uid])
+              : allUsers.add(credential.user!.uid);
+          prefs.setStringList('userAccounts', allUsers!);
+        } else {
+          prefs.setStringList('userAccounts', [credential.user!.uid]);
+        }
+
+        // prefs.setStringList('userAccounts', [credential.user!.uid]);
+
+        // if (prefs.getStringList('user') == null) {
+        //   prefs.setStringList('user', []);
+        // }
         userPro.setUserLoading(false);
-        showSnackBar(context, 'Login Successful');
+        showWhiteOverlayPopup(context, Icons.check_circle, null,
+            title: 'Login Successful',
+            message: 'You have successfully logged in',
+            isUsernameRes: false);
+        log('User Logged in Successfully');
         // navPush(BottomBar.routeName, context);
-        Navigator.pushReplacementNamed(context, BottomBar.routeName);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const BottomBar(),
+          ),
+          (route) => false,
+        );
       }
     } catch (e) {
       Provider.of<UserProvider>(context, listen: false).setUserLoading(false);
-      showSnackBar(context, e.toString());
+      log(e.toString());
+      showWhiteOverlayPopup(context, Icons.error, null,
+          title: 'Error Accured', message: e.toString(), isUsernameRes: false);
       // log(e.toString());
     }
   }
 
-  Future<bool> signInWithGoogle(BuildContext context) async {
-    bool res = false;
+  signInWithGoogle(BuildContext context) async {
     final auth = FirebaseAuth.instance;
     final firestore = FirebaseFirestore.instance;
     try {
@@ -105,18 +167,47 @@ class AuthController {
 
       if (user != null) {
         if (userCredential.additionalUserInfo!.isNewUser) {
-          firestore.collection('users').doc(user.uid).set({
-            'id': user.uid,
-            'username': user.displayName,
-            'profilePhoto': user.photoURL
-          });
+          NotificationMethods notificationMethods = NotificationMethods();
+          String token = await notificationMethods.getFirebaseMessagingToken();
+
+          UserModel userModel = UserModel(
+              dateOfBirth: DateTime.now(),
+              isVerified: false,
+              blockedByUsers: [],
+              closeFriends: [],
+              isPrivate: false,
+              blockedUsers: [],
+              token: token,
+              name: '',
+              uid: userCredential.user!.uid,
+              subscribedSoundPacks: [],
+              username: userCredential.user!.displayName!,
+              password: '',
+              email: userCredential.user!.email!,
+              photoUrl: userCredential.user!.photoURL!,
+              following: [],
+              pushToken: '',
+              followers: [],
+              subscribedUsers: [],
+              bio: '',
+              contact: '',
+              isSubscriptionEnable: false,
+              link: '',
+              price: 0,
+              soundPacks: []);
+          await firestore
+              .collection('users')
+              .doc(user.uid)
+              .set(userModel.toMap());
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => ProfileScreen()));
+        } else {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const BottomBar()));
         }
-        res = true;
       }
     } catch (e) {
-      showSnackBar(context, e.toString());
-      res = false;
+      log(e.toString());
     }
-    return res;
   }
 }

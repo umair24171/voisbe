@@ -1,6 +1,8 @@
 import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:social_notes/screens/add_note_screen/provider/note_provider.dart';
 import 'package:social_notes/screens/chat_screen.dart/model/chat_model.dart';
 
 class ChatController {
@@ -13,8 +15,10 @@ class ChatController {
       String receiverName,
       String receiverImage,
       String senderToken,
-      String receiverToken) async {
+      String receiverToken,
+      context) async {
     try {
+      Provider.of<NoteProvider>(context, listen: false).setIsLoading(true);
       await _firestore
           .collection('chats')
           .doc(usersId)
@@ -35,7 +39,9 @@ class ChatController {
         'receiverName': receiverName,
         'seen': false,
       });
+      Provider.of<NoteProvider>(context, listen: false).setIsLoading(false);
     } catch (e) {
+      Provider.of<NoteProvider>(context, listen: false).setIsLoading(false);
       log(e.toString());
     }
   }

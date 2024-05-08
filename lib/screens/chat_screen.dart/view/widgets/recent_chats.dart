@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
 import 'package:social_notes/screens/chat_screen.dart/model/recent_chat_model.dart';
+import 'package:social_notes/screens/chat_screen.dart/view/chat_screen.dart';
 
 class RecentChats extends StatelessWidget {
   RecentChats({
@@ -35,39 +36,82 @@ class RecentChats extends StatelessWidget {
                     recentChats.add(chatModel[i]);
                   }
                 }
+                bool isExist = false;
+
                 return ListView.builder(
                     shrinkWrap: true,
                     itemCount: recentChats.length,
                     // padding: EdgeInsets.symmetric(horizontal: 10),
                     scrollDirection: Axis.horizontal,
                     itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Column(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(45),
-                                  border:
-                                      Border.all(width: 3, color: greenColor)),
-                              child: CircleAvatar(
-                                  radius: 33,
-                                  backgroundImage: NetworkImage(
-                                      user!.uid == recentChats[index].senderId
-                                          ? recentChats[index].receiverImage!
-                                          : recentChats[index].senderImage!)),
-                            ),
-                            const SizedBox(
-                              height: 5,
-                            ),
-                            Text(
-                              user.uid == recentChats[index].senderId
-                                  ? recentChats[index].receiverName!
-                                  : recentChats[index].senderName!,
-                              style: TextStyle(
-                                  fontFamily: fontFamily, color: blackColor),
-                            )
-                          ],
+                      var rec = recentChats[index].senderId == user!.uid
+                          ? recentChats[index].receiverId
+                          : recentChats[index].senderId;
+                      var recName = recentChats[index].senderId == user.uid
+                          ? recentChats[index].receiverName
+                          : recentChats[index].senderName;
+                      var recPhotoUrl = recentChats[index].senderId == user.uid
+                          ? recentChats[index].receiverImage
+                          : recentChats[index].senderImage;
+                      var recToken = recentChats[index].senderId == user.uid
+                          ? recentChats[index].receiverToken
+                          : recentChats[index].senderToken;
+                      return InkWell(
+                        splashColor: Colors.transparent,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                      receiverId: rec,
+                                      receiverName: recName,
+                                      receiverPhotoUrl: recPhotoUrl,
+                                      rectoken: recToken,
+                                    )),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Column(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(45),
+                                    border: Border.all(
+                                        width: 3,
+                                        color: user.followers.contains(
+                                                    recentChats[index]
+                                                        .senderId) ||
+                                                user.followers.contains(
+                                                    recentChats[index]
+                                                        .receiverId)
+                                            ? greenColor
+                                            : primaryColor)),
+                                child: CircleAvatar(
+                                    radius: 33,
+                                    backgroundImage: NetworkImage(
+                                        user.uid == recentChats[index].senderId
+                                            ? recentChats[index].receiverImage!
+                                            : recentChats[index].senderImage!)),
+                              ),
+                              const SizedBox(
+                                height: 5,
+                              ),
+                              Text(
+                                user.uid == recentChats[index].senderId
+                                    ? recentChats[index].receiverName!
+                                    : recentChats[index].senderName!,
+                                style: TextStyle(
+                                    fontFamily: fontFamily,
+                                    color: user.followers.contains(
+                                                recentChats[index].senderId) ||
+                                            user.followers.contains(
+                                                recentChats[index].receiverId)
+                                        ? greenColor
+                                        : blackColor),
+                              )
+                            ],
+                          ),
                         ),
                       );
                     });

@@ -6,14 +6,53 @@ import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:firebase_core/firebase_core.dart';
 // import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:social_notes/resources/show_snack.dart';
+// import 'package:social_notes/resources/show_snack.dart';
 import 'package:social_notes/screens/add_note_screen/model/note_model.dart';
+import 'package:social_notes/screens/auth_screens/model/user_model.dart';
 import 'package:social_notes/screens/home_screen/model/book_mark_model.dart';
 import 'package:social_notes/screens/home_screen/model/comment_modal.dart';
+import 'package:social_notes/screens/home_screen/model/sub_comment_model.dart';
 
 class DisplayNotesProvider with ChangeNotifier {
   List<NoteModel> notes = [];
   List<NoteModel> currentUserPosts = [];
+
+  List<UserModel> allUsers = [];
+
+  // Map<int, bool> voicesMap = {};
+  List<Map<int, bool>> voicesMap = [];
+
+  addVoicesMap(int index, bool isPlaying) {
+    voicesMap.add({index: isPlaying});
+    notifyListeners();
+  }
+
+  updateVoicesMap(int index, bool isPlaying) {
+    voicesMap[index] = {index: isPlaying};
+    notifyListeners();
+  }
+
+  removeNote(NoteModel note) {
+    notes.remove(note);
+    notifyListeners();
+  }
+
+  // addVoicesMap(int index, bool isPlaying) {
+  //   voicesMap[index] = isPlaying;
+  //   notifyListeners();
+  // }
+
+  // updateVoicesMap(int index, bool isPlaying) {
+  //   voicesMap[index] = isPlaying;
+  //   notifyListeners();
+  // }
+
+  getAllUsers() async {
+    await FirebaseFirestore.instance.collection('users').get().then((value) {
+      allUsers = value.docs.map((e) => UserModel.fromMap(e.data())).toList();
+      notifyListeners();
+    });
+  }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -37,7 +76,11 @@ class DisplayNotesProvider with ChangeNotifier {
   }
 
   getAllNotes() async {
-    await _firestore.collection('notes').get().then((value) {
+    await _firestore
+        .collection('notes')
+        .orderBy('publishedDate', descending: true)
+        .get()
+        .then((value) {
       notes = value.docs.map((e) => NoteModel.fromMap(e.data())).toList();
       notifyListeners();
     });
@@ -51,6 +94,21 @@ class DisplayNotesProvider with ChangeNotifier {
           .collection('comments')
           .doc(commentId)
           .set(commentModel.toMap());
+    } catch (e) {
+      log(e.toString());
+    }
+  }
+
+  addSubComment(SubCommentModel subCommentModel) async {
+    try {
+      await _firestore
+          .collection('notes')
+          .doc(subCommentModel.postId)
+          .collection('comments')
+          .doc(subCommentModel.commentId)
+          .collection('subComments')
+          .doc(subCommentModel.subCommentId)
+          .set(subCommentModel.toMap());
     } catch (e) {
       log(e.toString());
     }
@@ -115,26 +173,59 @@ class DisplayNotesProvider with ChangeNotifier {
         // savedNoteModel = savedNote;
         book = bookmark;
         isSaved = true;
-
         break;
       }
     }
     if (isSaved) {
       await _firestore.collection('bookmarks').doc(book!.bookmarkId).delete();
-      bookMarkPosts
-          .removeWhere((element) => element.postId == bookmarkModel.postId);
-      notifyListeners();
-      showSnackBar(context, 'Post removed from saved');
+      // bookMarkPosts
+      //     .removeWhere((element) => element.postId == bookmarkModel.postId);
+      // notifyListeners();
+      // showSnackBar(context, 'Post removed from saved');
       log('deleted');
     } else {
       await _firestore
           .collection('bookmarks')
           .doc(bookmarkModel.bookmarkId)
           .set(bookmarkModel.toMap());
-      bookMarkPosts.add(bookmarkModel);
-      notifyListeners();
-      showSnackBar(context, 'Post saved');
+      // bookMarkPosts.add(bookmarkModel);
+      // notifyListeners();
+      // showSnackBar(context, 'Post saved');
       log('saved');
     }
+  }
+
+  // get all comments
+  List<CommentModel> _comments = [];
+  List<CommentModel> get comments => _comments;
+
+  List<CommentModel> _firstThreeComments = [];
+  List<CommentModel> get firstThreeComments => _firstThreeComments;
+
+  getComments(List<CommentModel> comments) async {
+    _comments = comments;
+    getFirstThreeComments();
+    getOtherComments();
+    notifyListeners();
+  }
+
+  // get the other comments list
+  List<CommentModel> _otherComments = [];
+  List<CommentModel> get otherComments => _otherComments;
+
+  getFirstThreeComments() async {
+    _firstThreeComments =
+        _comments.length > 3 ? _comments.sublist(0, 3) : _comments;
+    notifyListeners();
+  }
+
+  getOtherComments() async {
+    _otherComments.clear(); // Clear the existing list
+
+    if (_comments.length > 3) {
+      _otherComments.addAll(_comments.getRange(3, _comments.length).take(3));
+    }
+
+    notifyListeners();
   }
 }

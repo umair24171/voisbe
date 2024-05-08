@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
-import 'package:social_notes/resources/show_snack.dart';
+// import 'package:social_notes/resources/show_snack.dart';
 import 'package:social_notes/screens/auth_screens/controller/auth_controller.dart';
 import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
+import 'package:social_notes/screens/auth_screens/view/forgot_password.dart';
 import 'package:social_notes/screens/auth_screens/view/widgets/custom_form_field.dart';
 
 class AuthScreen extends StatelessWidget {
@@ -38,10 +39,14 @@ class AuthScreen extends StatelessWidget {
                   child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset(
-                          'assets/images/app-logo.png',
-                          height: 50,
-                          width: 40,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Image.asset(
+                            'assets/images/app-logo.png',
+                            height: 52,
+                            width: 27,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                         Text(
                           'VOISBE',
@@ -127,8 +132,8 @@ class AuthScreen extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       authProvider.isLogin
-                          ? 'Fill out the information below in order to access your account'
-                          : 'Let\'s get started by filling out the form below',
+                          ? 'Fill out the information below in order to access your account.'
+                          : 'Let\'s get started by filling out the form below.',
                       style: TextStyle(
                         fontFamily: fontFamily,
                         fontSize: 12,
@@ -150,17 +155,33 @@ class AuthScreen extends StatelessWidget {
                   label: 'Email',
                   controller: emailController,
                   isPassword: false,
+                  isEmail: true,
                 ),
                 CustomFormField(
-                  label: 'Password',
-                  controller: passController,
-                  isPassword: true,
-                ),
+                    label: 'Password',
+                    controller: passController,
+                    isPassword: true,
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Password is required';
+                      } else if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    }),
                 if (!authProvider.isLogin)
                   CustomFormField(
                     label: 'Confirm Password',
                     controller: confirmController,
                     isPassword: true,
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Password is required';
+                      } else if (value != passController.text) {
+                        return 'Password does not match';
+                      }
+                      return null;
+                    },
                   ),
                 const SizedBox(
                   height: 5,
@@ -181,7 +202,7 @@ class AuthScreen extends StatelessWidget {
                               confirmController.text.isNotEmpty) {
                             if (!emailController.text.contains('@') &&
                                 !emailController.text.contains('.')) {
-                              showSnackBar(context, 'Invalid email address');
+                              // showSnackBar(context, 'Invalid email address');
                             } else {
                               AuthController().userSignup(
                                   email: emailController.text,
@@ -196,7 +217,7 @@ class AuthScreen extends StatelessWidget {
                               passController.text.isNotEmpty) {
                             if (!emailController.text.contains('@') &&
                                 !emailController.text.contains('.')) {
-                              showSnackBar(context, 'Invalid email address');
+                              // showSnackBar(context, 'Invalid email address');
                             }
                             AuthController().userLogin(
                                 email: emailController.text,
@@ -244,7 +265,9 @@ class AuthScreen extends StatelessWidget {
                               const MaterialStatePropertyAll(Size(170, 20)),
                           backgroundColor:
                               MaterialStatePropertyAll(whiteColor)),
-                      onPressed: () {},
+                      onPressed: () async {
+                        await AuthController().signInWithGoogle(context);
+                      },
                       label: Text(
                         'Continue with Google',
                         style: TextStyle(
@@ -290,7 +313,17 @@ class AuthScreen extends StatelessWidget {
                       style: ButtonStyle(
                           backgroundColor:
                               MaterialStatePropertyAll(blackColor)),
-                      onPressed: () {},
+                      onPressed: () {
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                backgroundColor: whiteColor,
+                                elevation: 0,
+                                content: ForgotPasswordScreen(),
+                              );
+                            });
+                      },
                       child: Text(
                         'Forgot your password?',
                         style: TextStyle(

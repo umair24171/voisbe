@@ -20,6 +20,18 @@ class ChatProvider with ChangeNotifier {
   List<RecentChatModel> recentChats = [];
   List<RecentChatModel> searchedChats = [];
 
+  List<UserModel> searchedUSers = [];
+
+  addSearchedUsers(UserModel user) {
+    searchedUSers.add(user);
+    notifyListeners();
+  }
+
+  clearSearchedUser() {
+    searchedUSers.clear();
+    notifyListeners();
+  }
+
   getRecentChats() async {
     final currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -55,7 +67,11 @@ class ChatProvider with ChangeNotifier {
         .doc(conversationId)
         .collection('messages')
         .doc(chatId)
-        .update({'messageRead': 'read'}).then((value) {
+        .update({'messageRead': 'read'}).then((value) async {
+      await _firestore
+          .collection('chats')
+          .doc(conversationId)
+          .update({'seen': true});
       log('message read');
     });
   }

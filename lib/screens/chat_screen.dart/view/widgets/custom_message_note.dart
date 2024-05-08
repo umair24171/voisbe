@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
 import 'package:social_notes/screens/chat_screen.dart/model/chat_model.dart';
 import 'package:social_notes/screens/chat_screen.dart/provider/chat_provider.dart';
+import 'package:social_notes/screens/chat_screen.dart/view/widgets/chat_player.dart';
 import 'package:voice_message_package/voice_message_package.dart';
 
 class CustomMessageNote extends StatelessWidget {
@@ -36,56 +37,93 @@ class CustomMessageNote extends StatelessWidget {
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.only(
-                top: 15,
-              ),
-              child: VoiceMessageView(
-                // notActiveSliderColor: red,
-                // circlesColor: isMe ? primaryColor : whiteColor,
-                counterTextStyle:
-                    TextStyle(color: isMe ? primaryColor : whiteColor),
-                // circlesTextStyle: TextStyle(
-                //     color: isMe
-                //         ? whiteColor
-                //         : isShare
-                //             ? Colors.grey
-                //             : primaryColor),
-                activeSliderColor: isShare
-                    ? whiteColor
-                    : isMe
-                        ? primaryColor
-                        : whiteColor,
-                // notActiveSliderColor: whiteColor,
-                innerPadding: 16,
-                cornerRadius: 50,
-                backgroundColor: isShare
-                    ? Colors.grey.withOpacity(0.7)
-                    : isMe
-                        ? whiteColor
-                        : primaryColor,
-                controller: VoiceController(
-                  audioSrc: chatModel.message,
-                  maxDuration: const Duration(seconds: 500),
-                  isFile: false,
-                  onComplete: () {},
-                  onPause: () {},
-                  onPlaying: () {},
-                  onError: (err) {},
+                padding: const EdgeInsets.only(
+                  top: 15,
                 ),
-              ),
-            ),
-            !isMe
+                child: ChatPlayer(
+                    noteUrl: chatModel.message,
+                    height: 40,
+                    width: 180,
+                    size: 35,
+                    mainWidth: 300,
+                    waveColor: isShare
+                        ? whiteColor
+                        : isMe
+                            ? primaryColor
+                            : whiteColor,
+                    backgroundColor: isShare
+                        ? Colors.grey.withOpacity(0.7)
+                        : isMe
+                            ? whiteColor
+                            : primaryColor,
+                    mainHeight: 95)
+                // VoiceMessageView(
+                //   // notActiveSliderColor: red,
+                //   // circlesColor: isMe ? primaryColor : whiteColor,
+                //   counterTextStyle:
+                //       TextStyle(color: isMe ? primaryColor : whiteColor),
+                //   // circlesTextStyle: TextStyle(
+                //   //     color: isMe
+                //   //         ? whiteColor
+                //   //         : isShare
+                //   //             ? Colors.grey
+                //   //             : primaryColor),
+                //   activeSliderColor: isShare
+                //       ? whiteColor
+                //       : isMe
+                //           ? primaryColor
+                //           : whiteColor,
+                //   // notActiveSliderColor: whiteColor,
+                //   innerPadding: 16,
+                //   cornerRadius: 50,
+                // backgroundColor: isShare
+                //     ? Colors.grey.withOpacity(0.7)
+                //     : isMe
+                //         ? whiteColor
+                //         : primaryColor,
+                //   controller: VoiceController(
+                //     audioSrc: chatModel.message,
+                //     maxDuration: const Duration(seconds: 500),
+                //     isFile: false,
+                //     onComplete: () {},
+                //     onPause: () {},
+                //     onPlaying: () {},
+                //     onError: (err) {},
+                //   ),
+                // ),
+                ),
+            !isMe || isShare
                 ? Positioned(
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundImage: NetworkImage(chatModel.avatarUrl),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isShare
+                              ? Colors.grey.withOpacity(0.7)
+                              : whiteColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 17,
+                        backgroundImage: NetworkImage(chatModel.avatarUrl),
+                      ),
                     ),
                   )
                 : Positioned(
-                    left: MediaQuery.of(context).size.width * 0.76,
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundImage: NetworkImage(chatModel.avatarUrl),
+                    left: MediaQuery.of(context).size.width * 0.74,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: primaryColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 17,
+                        backgroundImage: NetworkImage(chatModel.avatarUrl),
+                      ),
                     ),
                   ),
             if (isShare)

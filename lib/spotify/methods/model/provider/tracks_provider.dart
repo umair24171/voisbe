@@ -1,18 +1,19 @@
-import 'package:flutter/foundation.dart';
-import 'package:social_notes/spotify/methods/model/track_model.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:social_notes/spotify/methods/model/track_model.dart';
+// import 'package:social_notes/spotify/methods/spotify_class.dart';
 
-class TracksProvider with ChangeNotifier {
-  List<Track> allTracks = [];
+// class TracksProvider with ChangeNotifier {
+//   List<TrackSongs> allTracks = [];
 
-  List<Track> searchedTracks = [];
-  bool isSearching = false;
-  setSearchTrack(bool value) {
-    isSearching = value;
-    notifyListeners();
-  }
+//   List<TrackSongs> searchedTracks = [];
+//   bool isSearching = false;
+//   setSearchTrack(bool value) {
+//     isSearching = value;
+//     notifyListeners();
+//   }
 
-  addTracks(Track track) {
-    allTracks.add(track);
-    notifyListeners();
-  }
-}
+//   addTracks(TrackSongs track) {
+//     allTracks.add(track);
+//     notifyListeners();
+//   }
+// }

@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
+
 // import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+
 // import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:social_notes/resources/colors.dart';
@@ -11,11 +11,8 @@ import 'package:social_notes/resources/navigation.dart';
 // import 'package:social_notes/screens/auth_screens/providers/auth_provider.dart';
 import 'package:social_notes/screens/profile_screen/model/sound_pack_model.dart';
 import 'package:social_notes/screens/profile_screen/provider.dart/update_profile_provider.dart';
-import 'package:social_notes/screens/profile_screen/spotify_view_screen.dart';
 import 'package:social_notes/screens/user_profile/view/widgets/custom_player.dart';
-import 'package:social_notes/spotify/methods/spotify_class.dart';
 // import 'package:social_notes/screens/upload_sounds/view/add_sound.dart';
-import 'package:voice_message_package/voice_message_package.dart';
 
 class UploadSound extends StatelessWidget {
   const UploadSound({super.key, required this.username});
@@ -78,79 +75,76 @@ class UploadSound extends StatelessWidget {
                       builder: (context) {
                         return AlertDialog(
                           backgroundColor: whiteColor,
-                          content: Container(
-                            // color: whiteColor,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: IconButton(
-                                      onPressed: () {
-                                        navPop(context);
-                                      },
-                                      icon: Icon(
-                                        Icons.close,
-                                        color: blackColor,
-                                        size: 30,
-                                      )),
-                                ),
-                                Text(
-                                  'How would you like to upload your audio files',
-                                  textAlign: TextAlign.center,
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: IconButton(
+                                    onPressed: () {
+                                      navPop(context);
+                                    },
+                                    icon: Icon(
+                                      Icons.close,
+                                      color: blackColor,
+                                      size: 30,
+                                    )),
+                              ),
+                              Text(
+                                'How would you like to upload your audio files',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontFamily: fontFamily,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                              ElevatedButton(
+                                style: ButtonStyle(
+                                    backgroundColor:
+                                        MaterialStateProperty.all<Color>(
+                                            blackColor)),
+                                onPressed: () {
+                                  Provider.of<UpdateProfileProvider>(context,
+                                          listen: false)
+                                      .pickAndUploadFiles()
+                                      .then((value) =>
+                                          Provider.of<UpdateProfileProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .createSoundCollection(
+                                                  username,
+                                                  'Ice on cake',
+                                                  '',
+                                                  SoundPackType.premium,
+                                                  true,
+                                                  false));
+                                },
+                                child: Text(
+                                  'Via Mobile Upload',
                                   style: TextStyle(
                                       fontFamily: fontFamily,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600),
+                                      color: whiteColor),
                                 ),
-                                ElevatedButton(
-                                  style: ButtonStyle(
-                                      backgroundColor:
-                                          MaterialStateProperty.all<Color>(
-                                              blackColor)),
-                                  onPressed: () {
-                                    Provider.of<UpdateProfileProvider>(context,
-                                            listen: false)
-                                        .pickAndUploadFiles()
-                                        .then((value) =>
-                                            Provider.of<UpdateProfileProvider>(
-                                                    context,
-                                                    listen: false)
-                                                .createSoundCollection(
-                                                    username,
-                                                    'Ice on cake',
-                                                    '',
-                                                    SoundPackType.premium,
-                                                    true,
-                                                    false));
-                                  },
-                                  child: Text(
-                                    'Via Mobile Upload',
-                                    style: TextStyle(
-                                        fontFamily: fontFamily,
-                                        color: whiteColor),
-                                  ),
+                              ),
+                              ElevatedButton(
+                                style: ButtonStyle(
+                                    backgroundColor:
+                                        MaterialStateProperty.all<Color>(
+                                            blackColor)),
+                                onPressed: () {
+                                  // Navigator.of(context).push(
+                                  //     MaterialPageRoute(builder: (context) {
+                                  //   return const SpotifyViewScreen();
+                                  // }));
+                                },
+                                child: Text(
+                                  'Via Spotify',
+                                  style: TextStyle(
+                                      fontFamily: fontFamily,
+                                      color: whiteColor),
                                 ),
-                                ElevatedButton(
-                                  style: ButtonStyle(
-                                      backgroundColor:
-                                          MaterialStateProperty.all<Color>(
-                                              blackColor)),
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                        MaterialPageRoute(builder: (context) {
-                                      return const SpotifyViewScreen();
-                                    }));
-                                  },
-                                  child: Text(
-                                    'Via Spotify',
-                                    style: TextStyle(
-                                        fontFamily: fontFamily,
-                                        color: whiteColor),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -197,22 +191,26 @@ class UploadSound extends StatelessWidget {
           ),
           TextFormField(
             decoration: InputDecoration(
-              constraints:
-                  BoxConstraints(maxHeight: 35, maxWidth: size.width * 0.8),
-              fillColor: Colors.grey[300],
-              filled: true,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-              prefixIcon: const Icon(
-                Icons.search,
-                color: Colors.grey,
-              ),
-              label: Text(
-                'Search',
-                style: TextStyle(fontFamily: fontFamily, color: Colors.grey),
-              ),
-            ),
+                constraints:
+                    BoxConstraints(maxHeight: 35, maxWidth: size.width * 0.8),
+                fillColor: Colors.grey[300],
+                filled: true,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Colors.grey,
+                ),
+                hintText: 'Search',
+                hintStyle:
+                    TextStyle(fontFamily: fontFamily, color: Colors.grey),
+                contentPadding: EdgeInsets.only(top: 10)
+                // label: Text(
+                //   'Search',
+                //   style: TextStyle(fontFamily: fontFamily, color: Colors.grey),
+                // ),
+                ),
           ),
           const SizedBox(
             height: 20,
@@ -261,6 +259,7 @@ class _SingleUploadSoundContainerState
     extends State<SingleUploadSoundContainer> {
   bool isEditing = false;
   final TextEditingController nameController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -293,20 +292,32 @@ class _SingleUploadSoundContainerState
                                 flex: 2,
                                 child: Container(
                                   width: 80,
+                                  height: 100,
                                   child: TextFormField(
+                                    focusNode: _focusNode,
                                     controller: nameController,
+                                    style: TextStyle(
+                                      color: blackColor,
+                                      fontFamily: fontFamily,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                     decoration: InputDecoration(
-                                      // fillColor: Colors.grey[300],
-                                      constraints: BoxConstraints(
-                                          maxHeight: 35, maxWidth: 80),
+                                      constraints:
+                                          const BoxConstraints(maxHeight: 100),
                                       contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              vertical: 12, horizontal: 10),
-                                      filled: false,
+                                          const EdgeInsets.only(bottom: 0),
+                                      // fillColor: Colors.grey[300],
+                                      // contentPadding:
+                                      //     const EdgeInsets.symmetric(
+                                      //   vertical: 12,
+                                      //   horizontal: 10,
+                                      // ),
+                                      // filled: false,
                                       border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          borderSide: BorderSide.none),
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -344,6 +355,9 @@ class _SingleUploadSoundContainerState
                         setState(() {
                           isEditing = !isEditing;
                         });
+                        // if (isEditing) {
+                        //   FocusScope.of(context).requestFocus(_focusNode);
+                        // }
                         if (!isEditing) {
                           await FirebaseFirestore.instance
                               .collection('soundPacks')

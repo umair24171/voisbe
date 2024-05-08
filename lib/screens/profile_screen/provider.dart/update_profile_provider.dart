@@ -6,12 +6,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:social_notes/screens/auth_screens/model/user_model.dart';
 import 'package:social_notes/screens/profile_screen/model/sound_pack_model.dart';
 import 'package:uuid/uuid.dart';
 // import 'package:flutter_archive/flutter_archive.dart';
 
 class UpdateProfileProvider with ChangeNotifier {
   List<String> fileUrls = [];
+  List<String> userNames = [];
   Future<void> pickAndUploadFiles() async {
     // Allow the user to pick files
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -71,6 +73,15 @@ class UpdateProfileProvider with ChangeNotifier {
           subscriptionEnable: isSubscribed);
       await firestore.collection('soundPacks').doc(id).set(data.toMap());
     }
+  }
+
+  getAllUserNames() async {
+    await FirebaseFirestore.instance.collection('users').get().then((value) {
+      List<UserModel> userModel =
+          value.docs.map((e) => UserModel.fromMap(e.data())).toList();
+      userNames = userModel.map((e) => e.name).toList();
+      notifyListeners();
+    });
   }
 
   // Future<void> pickAndZipFiles() async {
